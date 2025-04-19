@@ -1,40 +1,59 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.EventSystems;
 
 public class SimplePathDrawing : MonoBehaviour
 {
+    // References to Components
+    [SerializeField] private GameManager gameManager;
+    [SerializeField] private Camera pathCamera;
+    [SerializeField] private GameObject plane;
+
+    // Input Properties
+    [SerializeField] public Vector3 pathStartPosition = Vector3.zero;
+
+    // Path Drawing
     [SerializeField] private LineRenderer pathLine;
+    [SerializeField] private int maxPoints = 500;
     [SerializeField] private float minPointDistance = 0.5f;
-    [SerializeField] private int maxPoints = 100;
+    [SerializeField] private float maxPathDistance = 150f;
+    [SerializeField] private Color pathColor = Color.red;
+    [SerializeField] private Color maxDistanceReachedColor = new Color(0.8f, 0.2f, 0.2f, 1f);
+
+    // TODO: pathMarkerPrefab
     [SerializeField] private GameObject pathMarkerPrefab;
-    
-    public List<Vector3> PathPoints { get; private set; } = new List<Vector3>();
+
+    // Debugging
+    [SerializeField] private bool enableDebugLogs = true;
+    [SerializeField] private bool enableUpdateDebugLogs = true;
+
+    public List<Vector3> pathPoints { get; private set; } = new List<Vector3>();
     private List<GameObject> pathMarkers = new List<GameObject>();
-    
+
     private bool isDrawing = false;
-    
+    private float totalPathDistance = 0f;
+
+    public float TotalPathDistance => totalPathDistance;
+
     void OnEnable()
     {
-        Debug.Log("[SimplePathDrawing] Enabled");
-        // log if InputManager.Instance exists
-        if (InputManager.Instance != null)
-        {
-            Debug.Log("[SimplePathDrawing] InputManager instance found");
-        }
-        else
-        {
-            Debug.LogWarning("[SimplePathDrawing] InputManager instance not found");
-        }
+        if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Enabled");
 
-        // Subscribe to input events when enabled
-        if (InputManager.Instance != null)
-        {
-            InputManager.Instance.OnDragStart += StartPath;
-            InputManager.Instance.OnDrag += AddPathPoint;
-            InputManager.Instance.OnDragEnd += FinishPath;
-        }
-        
-        // Initialize line renderer if needed
+        InitializeLineRenderer();
+
+        // Set initial state
+        ClearPath();
+    }
+
+    void OnDisable()
+    {
+        if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Disabled");
+
+        ClearPath();
+    }
+
+    private void InitializeLineRenderer()
+    {
         if (pathLine == null)
         {
             pathLine = GetComponent<LineRenderer>();
@@ -42,122 +61,238 @@ public class SimplePathDrawing : MonoBehaviour
             {
                 pathLine = gameObject.AddComponent<LineRenderer>();
             }
-
             pathLine.startWidth = 0.5f;
             pathLine.endWidth = 0.5f;
             pathLine.material = new Material(Shader.Find("Sprites/Default"));
-            pathLine.startColor = Color.red;
-            pathLine.endColor = Color.red;
+            pathLine.startColor = pathColor;
+            pathLine.endColor = pathColor;
             pathLine.material.renderQueue = 3100;
         }
-        
-        // Set initial state
-        ClearPath();
     }
-    
-    void OnDisable()
+
+    void Update()
     {
-        // Unsubscribe from input events when disabled
-        if (InputManager.Instance != null)
+        if (enableUpdateDebugLogs)
         {
-            InputManager.Instance.OnDragStart -= StartPath;
-            InputManager.Instance.OnDrag -= AddPathPoint;
-            InputManager.Instance.OnDragEnd -= FinishPath;
+            Debug.Log($"[SimplePathDrawing] Input: MouseDown: {Input.GetMouseButtonDown(0)}, Mouse: {Input.GetMouseButton(0)}, TouchCount: {Input.touchCount}, TouchPhase: {(Input.touchCount > 0 ? Input.GetTouch(0).phase.ToString() : "N/A")}, isDrawing: {isDrawing}, PointerOverUI: {IsPointerOverUI()}");
+            Debug.Log($"[SimplePathDrawing] PathPoints.Count: {pathPoints.Count}, TotalPathDistance: {totalPathDistance}");
+        }
+
+        // Process input
+        if (!isDrawing && !IsPointerOverUI())
+        {
+            if (Input.touchCount > 0)
+            {
+                Touch touch = Input.GetTouch(0);
+
+                if (touch.phase == TouchPhase.Began)
+                {
+                    if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Touch began detected");
+                }
+
+                StartPath(GetWorldPositionFromPointer(touch.position));
+
+                isDrawing = true;
+
+                if (enableDebugLogs) Debug.Log($"[SimplePathDrawing] Path drawing started ({isDrawing})");
+            }
+            else if (Input.GetMouseButtonDown(0))
+            {
+                if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Mouse down detected");
+
+                StartPath(GetWorldPositionFromPointer(Input.mousePosition));
+
+                isDrawing = true;
+
+                if (enableDebugLogs) Debug.Log($"[SimplePathDrawing] Path drawing started ({isDrawing})");
+            }
+            else
+            {
+                if (enableDebugLogs) Debug.Log("[SimplePathDrawing] No input detected");
+            }
+
+            return;
+        }
+
+        if (isDrawing)
+        {
+            if (Input.touchCount > 0)
+            {
+                Touch touch = Input.GetTouch(0);
+
+                AddPathPoint(GetWorldPositionFromPointer(touch.position));
+
+                if (touch.phase == TouchPhase.Ended)
+                {
+                    ClearPath();
+                    isDrawing = false;
+                }
+            }
+            else
+            {
+                if (Input.GetMouseButton(0))
+                {
+                    AddPathPoint(GetWorldPositionFromPointer(Input.mousePosition));
+                }
+                else if (Input.GetMouseButtonUp(0))
+                {
+                    if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Mouse up detected");
+                    AddPathPoint(GetWorldPositionFromPointer(Input.mousePosition));
+                    ClearPath();
+                    isDrawing = false;
+                }
+            }
         }
     }
-    
-    public void StartDrawing()
+
+    private Vector3 GetWorldPositionFromPointer(Vector3 screenPosition)
     {
-        isDrawing = true;
-        ClearPath();
+        Ray ray = pathCamera.ScreenPointToRay(screenPosition);
+
+        if (plane == null || plane.transform == null)
+        {
+            Debug.LogError("[SimplePathDrawing] Plane or Plane Transform is null");
+            return screenPosition;
+        }
+
+        Plane groundPlane = new Plane(plane.transform.up, plane.transform.position);
+        if (groundPlane.Raycast(ray, out float distance))
+        {
+            return ray.GetPoint(distance);
+        }
+
+        return screenPosition;
     }
-    
+
+    private bool IsPointerOverUI()
+    {
+        return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+    }
+
     private void StartPath(Vector3 position)
     {
-        if (!isDrawing) return;
-        
+        if (enableDebugLogs) Debug.Log("[SimplePathDrawing] StartPath called");
+
         ClearPath();
+        AddPathPoint(pathStartPosition);
         AddPathPoint(position);
     }
-    
+
     private void AddPathPoint(Vector3 position)
     {
-        if (!isDrawing) return;
-        
         // Ensure Y position is consistent for all points (on the ground)
-        position.y = 10f;
-        
-        // Don't add if too close to the last point
-        if (PathPoints.Count > 0)
+        position.y = 0.1f;
+
+        if (pathPoints.Count >= maxPoints)
         {
-            float distance = Vector3.Distance(position, PathPoints[PathPoints.Count - 1]);
+            return;
+        }
+
+        if (pathPoints.Count > 0)
+        {
+            float distance = Vector3.Distance(position, pathPoints[pathPoints.Count - 1]);
             if (distance < minPointDistance)
             {
                 return;
             }
+
+            // Check if adding this point would exceed the max path distance
+            float newTotalDistance = totalPathDistance + distance;
+            if (newTotalDistance > maxPathDistance)
+            {
+                if (pathLine != null)
+                {
+                    pathLine.startColor = maxDistanceReachedColor;
+                    pathLine.endColor = maxDistanceReachedColor;
+                }
+
+                // Clamp the point to max distance
+                Vector3 direction = (position - pathPoints[pathPoints.Count - 1]).normalized;
+                float remainingDistance = maxPathDistance - totalPathDistance;
+                position = pathPoints[pathPoints.Count - 1] + direction * remainingDistance;
+                distance = remainingDistance;
+            }
+
+            totalPathDistance += distance;
         }
-        
-        // Don't exceed max points
-        if (PathPoints.Count >= maxPoints)
-        {
-            return;
-        }
-        
+
         // Add the point
-        PathPoints.Add(position);
-        
+        pathPoints.Add(position);
+
         // Create a visual marker
         if (pathMarkerPrefab != null)
         {
             GameObject marker = Instantiate(pathMarkerPrefab, position, Quaternion.identity);
             pathMarkers.Add(marker);
         }
-        
-        // Update line renderer
+
         UpdatePathVisual();
-    }
-    
-    private void FinishPath(Vector3 position)
-    {
-        if (!isDrawing) return;
-        
-        // Add final point if needed
-        AddPathPoint(position);
-        
-        // Notify the GameManager that the path is complete
-        if (GameManager.Instance != null && PathPoints.Count > 0)
+
+        if (gameManager != null)
         {
-            GameManager.Instance.ConfirmPath(PathPoints);
+            if (gameManager.IsPointInsideEnemyBase(position))
+            {
+                if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Last point is inside enemy base");
+
+                FinishPath();
+            }
+            Debug.Log("[SimplePathDrawing] Done checking point inside enemy base");
         }
-        
-        isDrawing = false;
+
+        // Debug log count points
+        if (enableDebugLogs) Debug.Log($"[SimplePathDrawing] Points count: {pathPoints.Count}");
     }
-    
+
+    private void FinishPath()
+    {
+        if (enableDebugLogs) Debug.Log("[SimplePathDrawing] FinishPath called");
+
+        isDrawing = false;
+
+        // Notify the GameManager that the path is complete
+        if (gameManager != null && pathPoints.Count > 0)
+        {
+            if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Path completed, notifying GameManager");
+
+            // Create a new list with a copy of all path points
+            List<Vector3> pathPointsCopy = new List<Vector3>(pathPoints);
+            gameManager.ConfirmPath(pathPoints);
+        }
+        else if (gameManager == null)
+        {
+            Debug.LogError("[SimplePathDrawing] GameManager reference not assigned");
+        }
+    }
+
     private void UpdatePathVisual()
     {
         if (pathLine != null)
         {
-            pathLine.positionCount = PathPoints.Count;
-            pathLine.SetPositions(PathPoints.ToArray());
+            pathLine.positionCount = pathPoints.Count;
+            pathLine.SetPositions(pathPoints.ToArray());
         }
     }
-    
+
     public void ClearPath()
     {
         // Clear points
-        PathPoints.Clear();
-        
+        pathPoints.Clear();
+
+        totalPathDistance = 0f;
+
         // Clear visual markers
         foreach (GameObject marker in pathMarkers)
         {
             Destroy(marker);
         }
         pathMarkers.Clear();
-        
+
         // Reset line renderer
         if (pathLine != null)
         {
             pathLine.positionCount = 0;
+            pathLine.startColor = pathColor;
+            pathLine.endColor = pathColor;
         }
     }
 }

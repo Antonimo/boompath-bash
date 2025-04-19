@@ -8,12 +8,12 @@ public class UnitController : MonoBehaviour
     public bool isPending = true;
     public float moveSpeed = 1f;
     private Vector3 spawnToPosition;
-    private Vector3 spawnTargetPosition;
-    private bool isMovingToSpawn = false;
-    
+    public Vector3 spawnTargetPosition;
+    public bool isMovingToSpawn = false;
+
     // TODO: UnitPath type
     private List<Vector3> path = new List<Vector3>();
-    
+
     private int currentPathIndex = 0;
     // TODO: current Action
     // post-spawn navigation
@@ -23,8 +23,8 @@ public class UnitController : MonoBehaviour
     // collected something
     // attacking opponent base
     // death
-    private bool isMoving = false;
-    
+    public bool isMoving = false;
+
     private Rigidbody rb;
     private Renderer unitRenderer;
 
@@ -37,7 +37,7 @@ public class UnitController : MonoBehaviour
     void Start()
     {
         Debug.Log($"Unit {gameObject.name} spawned at {transform.position}");
-        
+
         // Auto-assign to player if not set
         if (ownerPlayer == null)
         {
@@ -49,7 +49,7 @@ public class UnitController : MonoBehaviour
                 ownerPlayer.AddUnit(this);
             }
         }
-        
+
         // Set the unit's color based on the owner player's color
         if (ownerPlayer != null && unitRenderer != null)
         {
@@ -94,7 +94,9 @@ public class UnitController : MonoBehaviour
 
     void FixedUpdate()
     {
-                if (isMovingToSpawn)
+        Debug.Log($"Unit {gameObject.name} FixedUpdate position: {transform.position}, isMovingToSpawn: {isMovingToSpawn}, isMoving: {isMoving}, currentPathIndex: {currentPathIndex}, pathCount: {path.Count}");
+
+        if (isMovingToSpawn)
         {
             // Move toward spawnTargetPosition using Rigidbody
             Vector3 currentPos = transform.position;
@@ -115,13 +117,20 @@ public class UnitController : MonoBehaviour
 
         if (isMoving && path.Count > 0)
         {
+            // TODO: fix names, refactor this whole thing...
             Vector3 target = path[currentPathIndex];
+            target.y = transform.position.y;
+            Debug.Log($"target: {target}, original target: {path[currentPathIndex]}");
             Vector3 direction = (target - transform.position).normalized;
             Vector3 movePos = transform.position + direction * moveSpeed * Time.fixedDeltaTime;
-            movePos.y = transform.position.y; // Respect gravity
-            rb.MovePosition(movePos);
+            // movePos.y = transform.position.y; // Respect gravity
 
-            if (Vector3.Distance(transform.position, target) < 0.1f)
+            float distance = Vector3.Distance(new Vector3(transform.position.x, 0, transform.position.z), new Vector3(target.x, 0, target.z));
+
+            rb.MovePosition(movePos);
+            Debug.Log($"Unit {gameObject.name} moving to {target}, movePos: {movePos}, distance: {distance}");
+
+            if (distance < 0.1f)
             {
                 currentPathIndex++;
                 if (currentPathIndex >= path.Count)
@@ -135,28 +144,42 @@ public class UnitController : MonoBehaviour
 
     void Update()
     {
-        // Move along the path if there are points to follow
-        if (isMoving && currentPathIndex < path.Count)
-        {
-            Vector3 target = path[currentPathIndex];
-            Vector3 direction = (target - transform.position).normalized;
-            transform.position += direction * moveSpeed * Time.deltaTime;
+        // TODO: there must be a convinient way to display this data
+        // in the inspect view? the script component can show this data somehow?
+        // label on the Scene?
+        Debug.Log($"Unit {gameObject.name} position: {transform.position}, currentPathIndex: {currentPathIndex}, isMoving: {isMoving}, pathCount: {path.Count}");
 
-            // Check if close enough to the current point
-            if (Vector3.Distance(transform.position, target) < 0.1f)
-            {
-                currentPathIndex++;
-                if (currentPathIndex >= path.Count)
-                {
-                    // Reached the end of the path
-                    isMoving = false;
-                }
-            }
+        if (isMoving)
+        {
+            // Move();
         }
     }
 
-    // We don't need OnMouseDown anymore as InputManager handles this
-    // void OnMouseDown() has been removed
+    private void Move()
+    {
+        // Move along the path if there are points to follow
+        if (isMoving && currentPathIndex < path.Count)
+        {
+            // Get the target point while preserving our current Y position
+            Vector3 currentPosition = transform.position;
+            Vector3 targetPoint = path[currentPathIndex];
+            Vector3 targetPosition = new Vector3(targetPoint.x, currentPosition.y, targetPoint.z);
+
+            // Calculate direction to the target (ignoring Y component)
+            Vector3 direction = (targetPosition - currentPosition).normalized;
+
+            // Handle rotation - gradually turn to face the direction of movement
+            if (direction != Vector3.zero)
+            {
+                // Create the target rotation
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
+
+                // Smoothly rotate towards the target direction
+                float rotationSpeed = 5.0f; // Adjust this value to control rotation speed
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            }
+        }
+    }
 
     public void FollowPath(List<Vector3> newPath)
     {
@@ -164,16 +187,9 @@ public class UnitController : MonoBehaviour
         {
             path = new List<Vector3>(newPath); // Create a copy of the path
             currentPathIndex = 0;
-            isMoving = true;
             isPending = false; // Unit is no longer pending once given a path
-            
-            // Face the first point in the path
-            Vector3 direction = (path[0] - transform.position).normalized;
-            if (direction != Vector3.zero)
-            {
-                transform.rotation = Quaternion.LookRotation(direction);
-            }
-            
+            isMoving = true;
+
             Debug.Log($"Unit {gameObject.name} following path with {path.Count} points");
         }
     }
@@ -185,15 +201,15 @@ public class UnitController : MonoBehaviour
         {
             // Apply visual highlighting (could be outline, glow, etc.)
             // For now, let's just adjust brightness
-            Color baseColor = highlight ? 
+            Color baseColor = highlight ?
                 ownerPlayer.playerColor * 1.5f : // Brighter when highlighted
                 ownerPlayer.playerColor;         // Normal color otherwise
-            
+
             // Ensure color values don't exceed 1
             baseColor.r = Mathf.Clamp01(baseColor.r);
             baseColor.g = Mathf.Clamp01(baseColor.g);
             baseColor.b = Mathf.Clamp01(baseColor.b);
-            
+
             unitRenderer.material.color = baseColor;
         }
     }

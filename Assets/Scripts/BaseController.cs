@@ -8,27 +8,27 @@ public class BaseController : MonoBehaviour
 
     public GameObject unitPrefab;    // Reference to the Unit Prefab
     public Transform spawnTo;        // Where the spawned Unit will go when coming out of the base
-    
+
     [Header("Unit Production")]
     public float unitSpawnInterval = 5f;  // Time between unit spawns
     public int maxUnits = 50;             // Maximum number of units player can have
-    
+
     private float spawnTimer = 0f;        // Timer for next spawn
     private bool producingUnit = false;   // Whether the base is ready to produce a unit
     private List<GameObject> producedUnits = new List<GameObject>(); // List of all units produced
-    
+
     private Collider baseCollider;
 
     void Start()
     {
         baseCollider = GetComponent<Collider>();
-        
+
         // Auto-find player if not set through inspector
-        if (ownerPlayer == null) 
+        if (ownerPlayer == null)
         {
             // Try to find player by parent relationship
             ownerPlayer = GetComponentInParent<Player>();
-            
+
             if (ownerPlayer == null)
             {
                 Debug.LogError($"Base {gameObject.name} has no owner player assigned!", this);
@@ -38,7 +38,7 @@ public class BaseController : MonoBehaviour
                 Debug.Log($"Base automatically assigned to player: {ownerPlayer.playerName}");
             }
         }
-        
+
         // Spawn the first unit immediately
         SpawnUnit();
     }
@@ -62,10 +62,10 @@ public class BaseController : MonoBehaviour
         {
             return false;
         }
-        
+
         // Clean up destroyed units from the list
         producedUnits.RemoveAll(unit => unit == null);
-        
+
         return true;
     }
 
@@ -73,10 +73,10 @@ public class BaseController : MonoBehaviour
     {
         Vector3 spawnPosition = transform.position;
         GameObject newUnit = Instantiate(unitPrefab, spawnPosition, transform.rotation);
-        
+
         // Set the parent while preserving world position, rotation and scale
         newUnit.transform.SetParent(transform, worldPositionStays: true);
-        
+
         producedUnits.Add(newUnit);
         Debug.Log($"Unit spawned at {spawnPosition}. Total units: {producedUnits.Count}");
 
@@ -94,7 +94,7 @@ public class BaseController : MonoBehaviour
             // {
             //     ownerPlayer.AddUnit(unitController);
             // }
-            
+
             // Initialize movement to spawnTo position
             unitController.Initialize(spawnTo.position);
         }
@@ -120,7 +120,7 @@ public class BaseController : MonoBehaviour
         producingUnit = true; // Allow spawning the next unit
         spawnTimer = unitSpawnInterval; // Start the timer
     }
-    
+
     // Used for game state visualization
     void OnDrawGizmos()
     {
@@ -129,7 +129,7 @@ public class BaseController : MonoBehaviour
             // Draw a colored sphere to identify owner
             Gizmos.color = ownerPlayer.playerColor;
             Gizmos.DrawWireSphere(transform.position, 1.5f);
-            
+
             // Draw a line to the spawnTo position if assigned
             if (spawnTo != null)
             {
