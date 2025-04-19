@@ -22,14 +22,10 @@ public class GameManager : MonoBehaviour
     // Other components
     [SerializeField] private CameraManager cameraManager;
     [SerializeField] private SimplePathDrawing pathDrawing;
+    [SerializeField] private PlayerTurn playerTurn;
 
     // Debugging
     [SerializeField] private bool enableDebugLogs = true;
-
-    // Events
-    public static event Action<GameState> OnGameStateChanged;
-    public static event Action<Player> OnPlayerTurnChanged;
-    public static event Action<UnitController> OnUnitSelected;
 
     private void Start()
     {
@@ -44,17 +40,6 @@ public class GameManager : MonoBehaviour
             Debug.LogError("No players found in the scene. Please assign players or a players parent.");
             return;
         }
-
-        // Subscribe to our own events
-        OnPlayerTurnChanged += (player) => HighlightSelectableUnits(true);
-        // TODO: refactor
-        OnGameStateChanged += (state) =>
-        {
-            if (state == GameState.PlayersTurn)
-                HighlightSelectableUnits(true);
-            else
-                HighlightSelectableUnits(false);
-        };
 
         StartCoroutine(DelayedInitialization());
     }
@@ -101,9 +86,6 @@ public class GameManager : MonoBehaviour
                 // Handle game over
                 break;
         }
-
-        // Notify subscribers about the state change
-        OnGameStateChanged?.Invoke(currentState);
     }
 
     // Change to a new game state
@@ -141,9 +123,6 @@ public class GameManager : MonoBehaviour
                 // Handle game over
                 break;
         }
-
-        // Notify subscribers about the state change
-        OnGameStateChanged?.Invoke(currentState);
     }
 
     // Start a specific player's turn
@@ -160,12 +139,14 @@ public class GameManager : MonoBehaviour
         // Switch to main game camera
         if (cameraManager != null)
         {
-            // cameraManager.SwitchToMainCamera();
+            cameraManager.SwitchToMainCamera();
         }
 
-        // Invoke event
-        OnPlayerTurnChanged?.Invoke(CurrentPlayer);
-        OnGameStateChanged?.Invoke(currentState);
+        if (playerTurn != null)
+        {
+            playerTurn.player = CurrentPlayer;
+            playerTurn.enabled = true;
+        }
     }
 
     // Switch to next player's turn
@@ -184,7 +165,6 @@ public class GameManager : MonoBehaviour
             unit.isPending)
         {
             selectedUnit = unit;
-            OnUnitSelected?.Invoke(selectedUnit);
 
             // Change to path drawing state
             ChangeGameState(GameState.PathDrawing);
@@ -271,20 +251,6 @@ public class GameManager : MonoBehaviour
     {
         selectedUnit = null;
         ChangeGameState(GameState.PlayersTurn);
-    }
-
-    public void HighlightSelectableUnits(bool highlight)
-    {
-        if (CurrentPlayer != null)
-        {
-            foreach (UnitController unit in CurrentPlayer.OwnedUnits)
-            {
-                if (unit != null && unit.isPending)
-                {
-                    unit.HighlightAsSelectable(highlight);
-                }
-            }
-        }
     }
 
     public void EndTurn()

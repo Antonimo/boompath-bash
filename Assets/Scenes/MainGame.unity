@@ -154,6 +154,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 512370810}
+  - {fileID: 1609904528}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &260143751 stripped
@@ -607,7 +608,7 @@ MonoBehaviour:
   pathColor: {r: 1, g: 0, b: 0, a: 1}
   maxDistanceReachedColor: {r: 0.8, g: 0.2, b: 0.2, a: 1}
   pathMarkerPrefab: {fileID: 0}
-  enableDebugLogs: 1
+  enableDebugLogs: 0
   enableUpdateDebugLogs: 0
 --- !u!4 &512370810
 Transform:
@@ -675,6 +676,7 @@ MonoBehaviour:
   selectedUnit: {fileID: 0}
   cameraManager: {fileID: 1142975678}
   pathDrawing: {fileID: 512370809}
+  playerTurn: {fileID: 1609904529}
   enableDebugLogs: 1
 --- !u!1001 &702444570
 PrefabInstance:
@@ -1219,6 +1221,58 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5761600688643184849, guid: f9583dcb14390405da60c0ae60a07719, type: 3}
   m_PrefabInstance: {fileID: 702444570}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1609904527
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1609904528}
+  - component: {fileID: 1609904529}
+  m_Layer: 0
+  m_Name: PlayerTurn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1609904528
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1609904527}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 226929513}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1609904529
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1609904527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fce525f585893495c8c66b2d0eee2e2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  player: {fileID: 0}
+  mainCamera: {fileID: 270345444}
+  gameManager: {fileID: 691212229}
+  unitLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  raycastDistance: 100
+  enableDebugLogs: 1
 --- !u!4 &1656485126 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3079531451867457621, guid: 20ab874f9c11d48708f07f5d7e126d9d, type: 3}

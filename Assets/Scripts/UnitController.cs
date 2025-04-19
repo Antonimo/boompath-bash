@@ -28,6 +28,11 @@ public class UnitController : MonoBehaviour
     private Rigidbody rb;
     private Renderer unitRenderer;
 
+    // Debugging
+    [SerializeField] private bool enableDebugLogs = false;
+    [SerializeField] private bool enableUpdateDebugLogs = false;
+    [SerializeField] private bool enableFixedUpdateDebugLogs = false;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -36,7 +41,7 @@ public class UnitController : MonoBehaviour
 
     void Start()
     {
-        Debug.Log($"Unit {gameObject.name} spawned at {transform.position}");
+        DebugLog($"Unit {gameObject.name} spawned at {transform.position}");
 
         // Auto-assign to player if not set
         if (ownerPlayer == null)
@@ -94,7 +99,7 @@ public class UnitController : MonoBehaviour
 
     void FixedUpdate()
     {
-        Debug.Log($"Unit {gameObject.name} FixedUpdate position: {transform.position}, isMovingToSpawn: {isMovingToSpawn}, isMoving: {isMoving}, currentPathIndex: {currentPathIndex}, pathCount: {path.Count}");
+        DebugLogFixedUpdate($"Unit {gameObject.name} FixedUpdate position: {transform.position}, isMovingToSpawn: {isMovingToSpawn}, isMoving: {isMoving}, currentPathIndex: {currentPathIndex}, pathCount: {path.Count}");
 
         if (isMovingToSpawn)
         {
@@ -111,7 +116,7 @@ public class UnitController : MonoBehaviour
             if (Vector3.Distance(new Vector3(currentPos.x, 0, currentPos.z), new Vector3(spawnTargetPosition.x, 0, spawnTargetPosition.z)) < 0.1f)
             {
                 isMovingToSpawn = false;
-                Debug.Log($"Unit {gameObject.name} reached spawn target at {spawnTargetPosition}");
+                DebugLogFixedUpdate($"Unit {gameObject.name} reached spawn target at {spawnTargetPosition}");
             }
         }
 
@@ -120,7 +125,7 @@ public class UnitController : MonoBehaviour
             // TODO: fix names, refactor this whole thing...
             Vector3 target = path[currentPathIndex];
             target.y = transform.position.y;
-            Debug.Log($"target: {target}, original target: {path[currentPathIndex]}");
+            DebugLogFixedUpdate($"target: {target}, original target: {path[currentPathIndex]}");
             Vector3 direction = (target - transform.position).normalized;
             Vector3 movePos = transform.position + direction * moveSpeed * Time.fixedDeltaTime;
             // movePos.y = transform.position.y; // Respect gravity
@@ -128,7 +133,7 @@ public class UnitController : MonoBehaviour
             float distance = Vector3.Distance(new Vector3(transform.position.x, 0, transform.position.z), new Vector3(target.x, 0, target.z));
 
             rb.MovePosition(movePos);
-            Debug.Log($"Unit {gameObject.name} moving to {target}, movePos: {movePos}, distance: {distance}");
+            DebugLogFixedUpdate($"Unit {gameObject.name} moving to {target}, movePos: {movePos}, distance: {distance}");
 
             if (distance < 0.1f)
             {
@@ -147,7 +152,7 @@ public class UnitController : MonoBehaviour
         // TODO: there must be a convinient way to display this data
         // in the inspect view? the script component can show this data somehow?
         // label on the Scene?
-        Debug.Log($"Unit {gameObject.name} position: {transform.position}, currentPathIndex: {currentPathIndex}, isMoving: {isMoving}, pathCount: {path.Count}");
+        DebugLogUpdate($"Unit {gameObject.name} position: {transform.position}, currentPathIndex: {currentPathIndex}, isMoving: {isMoving}, pathCount: {path.Count}");
 
         if (isMoving)
         {
@@ -190,7 +195,7 @@ public class UnitController : MonoBehaviour
             isPending = false; // Unit is no longer pending once given a path
             isMoving = true;
 
-            Debug.Log($"Unit {gameObject.name} following path with {path.Count} points");
+            DebugLog($"Unit {gameObject.name} following path with {path.Count} points");
         }
     }
 
@@ -211,6 +216,30 @@ public class UnitController : MonoBehaviour
             baseColor.b = Mathf.Clamp01(baseColor.b);
 
             unitRenderer.material.color = baseColor;
+        }
+    }
+
+    private void DebugLog(string message)
+    {
+        if (enableDebugLogs)
+        {
+            Debug.Log($"[PlayerTurn] {message}");
+        }
+    }
+
+    private void DebugLogUpdate(string message)
+    {
+        if (enableUpdateDebugLogs)
+        {
+            Debug.Log($"[PlayerTurn] {message}");
+        }
+    }
+
+    private void DebugLogFixedUpdate(string message)
+    {
+        if (enableFixedUpdateDebugLogs)
+        {
+            Debug.Log($"[PlayerTurn] {message}");
         }
     }
 }
