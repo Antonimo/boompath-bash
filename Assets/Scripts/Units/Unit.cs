@@ -13,6 +13,8 @@ public class Unit : MonoBehaviour
     //
     //
     public float moveSpeed = 1f;
+    // TODO: consider unit size?
+    public float enemyDetectionRange = 3f;
     //
     //
     public Player ownerPlayer;
@@ -197,6 +199,25 @@ public class Unit : MonoBehaviour
         DebugLog($"Unit {gameObject.name} position: {transform.position}, distance to target: {distanceToTarget}, target: {targetPosition}, stopping distance: {stoppingDistance}");
 
         return distanceToTarget < stoppingDistance;
+    }
+
+    // TODO: check player team is an opponent team
+    public bool CheckForEnemiesInRange(out Unit enemy)
+    {
+        enemy = null;
+
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, enemyDetectionRange);
+        foreach (var hitCollider in hitColliders)
+        {
+            Unit unit = hitCollider.GetComponent<Unit>();
+            if (unit != null && unit.ownerPlayer != ownerPlayer)
+            {
+                enemy = unit;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void DebugLog(string message)

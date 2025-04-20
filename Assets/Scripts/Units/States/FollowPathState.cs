@@ -16,6 +16,11 @@ public class FollowPathState : UnitState
 
     public override void Update()
     {
+        if (unit.CheckForEnemiesInRange(out Unit enemy))
+        {
+            unit.ChangeState(new AttackState(unit, enemy, this));
+            return;
+        }
     }
 
     public override void FixedUpdate()

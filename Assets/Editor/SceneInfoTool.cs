@@ -6,6 +6,7 @@ public class SceneInfoTool : EditorWindow
     private static Vector3 _mouseWorldPos = Vector3.zero;
     private static Vector3 _selectedObjectScaledSize = Vector3.zero;
     private static Transform _selectedTransform;
+    private static float _distanceBetweenObjects = 0f; // New field for distance
 
     private float _mouseUpdateInterval = 0.1f; // Update every 0.1 seconds
     private double _lastMouseUpdateTime;
@@ -44,7 +45,6 @@ public class SceneInfoTool : EditorWindow
             {
                 _mouseWorldPos = ray.GetPoint(rayDistance);
                 Repaint(); // Repaint the Editor window when mouse position updates
-                // sceneView.Repaint(); // No need to repaint SceneView every mouse update in this setup
             }
             _lastMouseUpdateTime = currentTime;
         }
@@ -77,6 +77,19 @@ public class SceneInfoTool : EditorWindow
         {
             _selectedObjectScaledSize = Vector3.zero; // Nothing selected
         }
+
+        // Calculate distance if exactly two objects are selected
+        if (Selection.gameObjects.Length == 2)
+        {
+            Transform transform1 = Selection.gameObjects[0].transform;
+            Transform transform2 = Selection.gameObjects[1].transform;
+            _distanceBetweenObjects = Vector3.Distance(transform1.position, transform2.position);
+        }
+        else
+        {
+            _distanceBetweenObjects = 0f; // Reset distance if not exactly two objects
+        }
+
         Repaint(); // Repaint the Editor window when selection changes
     }
 
@@ -92,6 +105,18 @@ public class SceneInfoTool : EditorWindow
         else
         {
             EditorGUILayout.LabelField("No object selected.");
+        }
+
+        // Display distance if exactly two objects are selected
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Distance Between Objects:");
+        if (Selection.gameObjects.Length == 2)
+        {
+            EditorGUILayout.LabelField($"{_distanceBetweenObjects:F2} units");
+        }
+        else
+        {
+            EditorGUILayout.LabelField("Select exactly two objects to measure distance.");
         }
     }
 }
