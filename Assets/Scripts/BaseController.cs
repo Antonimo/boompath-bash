@@ -83,11 +83,11 @@ public class BaseController : MonoBehaviour
         // Disable collision if unit is pending
         UpdateUnitCollision(newUnit);
 
-        UnitController unitController = newUnit.GetComponent<UnitController>();
-        if (unitController != null)
+        Unit unit = newUnit.GetComponent<Unit>();
+        if (unit != null)
         {
             // Set the owner player
-            unitController.ownerPlayer = ownerPlayer;
+            unit.ownerPlayer = ownerPlayer;
 
             // Register with player if available
             // if (ownerPlayer != null)
@@ -96,21 +96,22 @@ public class BaseController : MonoBehaviour
             // }
 
             // Initialize movement to spawnTo position
-            unitController.Initialize(spawnTo.position);
+            unit.Initialize(spawnTo.position);
         }
     }
 
     // Check and update collision based on unit's isPending state
-    public void UpdateUnitCollision(GameObject unit)
+    public void UpdateUnitCollision(GameObject unitObject)
     {
-        UnitController unitController = unit.GetComponent<UnitController>();
-        Collider unitCollider = unit.GetComponent<Collider>();
+        Unit unit = unitObject.GetComponent<Unit>();
+        Collider unitCollider = unitObject.GetComponent<Collider>();
 
         // log to see if not null
-        Debug.Log($"BaseCollider: {baseCollider}, UnitCollider: {unitCollider}, UnitController: {unitController}");
-        if (baseCollider != null && unitCollider != null && unitController != null)
+        Debug.Log($"BaseCollider: {baseCollider}, UnitCollider: {unitCollider}, unit: {unit}");
+
+        if (baseCollider != null && unitCollider != null && unit != null)
         {
-            Physics.IgnoreCollision(baseCollider, unitCollider, unitController.isPending);
+            Physics.IgnoreCollision(baseCollider, unitCollider, unit.IsPending);
         }
     }
 

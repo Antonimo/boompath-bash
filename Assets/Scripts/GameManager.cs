@@ -16,8 +16,8 @@ public class GameManager : MonoBehaviour
     public Player CurrentPlayer => players[currentPlayerIndex];
 
     // Selected unit for path drawing
-    [SerializeField] private UnitController selectedUnit;
-    public UnitController SelectedUnit => selectedUnit;
+    [SerializeField] private Unit selectedUnit;
+    public Unit SelectedUnit => selectedUnit;
 
     // Other components
     [SerializeField] private CameraManager cameraManager;
@@ -157,12 +157,12 @@ public class GameManager : MonoBehaviour
     }
 
     // Select a unit and enter path drawing mode
-    public void SelectUnit(UnitController unit)
+    public void SelectUnit(Unit unit)
     {
         // Only allow selection if it's player's turn and unit belongs to current player
         if (currentState == GameState.PlayersTurn &&
             unit.ownerPlayer == CurrentPlayer &&
-            unit.isPending)
+            unit.IsPending)
         {
             selectedUnit = unit;
 

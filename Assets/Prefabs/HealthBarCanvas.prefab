@@ -235,7 +235,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!114 &2314607368787031255
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -269,6 +269,7 @@ MonoBehaviour:
   healthComponent: {fileID: 0}
   offset: {x: 0, y: 1.5, z: 0}
   mainCamera: {fileID: 0}
+  managePosition: 1
 --- !u!1 &3727142698864087084
 GameObject:
   m_ObjectHideFlags: 0

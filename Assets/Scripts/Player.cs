@@ -9,8 +9,8 @@ public class Player : MonoBehaviour
     // Team
     public int teamId = 0;
 
-    [SerializeField] private List<UnitController> ownedUnits = new List<UnitController>();
-    public List<UnitController> OwnedUnits => ownedUnits;
+    [SerializeField] private List<Unit> ownedUnits = new List<Unit>();
+    public List<Unit> OwnedUnits => ownedUnits;
 
     // Reference to player's base
     public Transform playerBase;
@@ -34,9 +34,9 @@ public class Player : MonoBehaviour
     // Check if this player has any pending units
     public bool HasPendingUnits()
     {
-        foreach (UnitController unit in ownedUnits)
+        foreach (Unit unit in ownedUnits)
         {
-            if (unit.isPending)
+            if (unit.IsPending)
             {
                 return true;
             }
@@ -45,7 +45,7 @@ public class Player : MonoBehaviour
     }
 
     // Method to add a new unit to this player
-    public void AddUnit(UnitController unit)
+    public void AddUnit(Unit unit)
     {
         if (!ownedUnits.Contains(unit))
         {

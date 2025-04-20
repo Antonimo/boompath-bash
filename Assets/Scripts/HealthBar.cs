@@ -11,8 +11,7 @@ public class HealthBar : MonoBehaviour
 
     private void Awake()
     {
-        Debug.Log("HealthBar Awake called");
-
+        // Debug.Log("HealthBar Awake called");
     }
 
     private void Start()

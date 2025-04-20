@@ -60,12 +60,12 @@ public class PlayerTurn : MonoBehaviour
                 DebugLog($"Hit object on unitLayerMask: {hit.collider.gameObject.name} at position {hit.point}");
 
                 // Hit a unit - check if it belongs to current player
-                UnitController unit = hit.collider.GetComponent<UnitController>();
+                Unit unit = hit.collider.GetComponent<Unit>();
                 if (unit != null)
                 {
-                    DebugLog($"UnitController found, Owner: {unit.ownerPlayer}, isPending: {unit.isPending}");
+                    DebugLog($"UnitController found, Owner: {unit.ownerPlayer}, isPending: {unit.IsPending}");
                     // Only process taps on units belonging to current player
-                    if (unit.ownerPlayer == player && unit.isPending)
+                    if (unit.ownerPlayer == player && unit.IsPending)
                     {
                         DebugLog("Valid unit selected, invoking OnTapUnit");
                         gameManager.SelectUnit(unit);
@@ -107,9 +107,9 @@ public class PlayerTurn : MonoBehaviour
     {
         if (player != null)
         {
-            foreach (UnitController unit in player.OwnedUnits)
+            foreach (Unit unit in player.OwnedUnits)
             {
-                if (unit != null && unit.isPending)
+                if (unit != null && unit.IsPending)
                 {
                     unit.HighlightAsSelectable(highlight);
                 }
