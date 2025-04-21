@@ -1,0 +1,29 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Project: Boompath Bash
+A 3D mobile game developed in Unity 6 where units follow player-drawn paths to attack enemy bases.
+
+### Technical Stack
+- Unity 6 (macOS/Apple Silicon)
+- C# targeting iOS/Android/Desktop
+
+## Developer Background
+- I am an experienced programmer new to C# and Unity.
+- I understand general programming concepts but need guidance on Unity-specific patterns, C# syntax, and best practices for mobile game development with Unity.
+
+## Coding Guidelines
+- Use C# with Unity 6 best practices, game development best practices for small projects
+- Minimize garbage collection (avoid frequent `new` allocations)
+- Name variables and methods descriptively
+- Follow C# naming conventions: `PascalCase` for public members, `camelCase` for private fields
+
+### Architecture Guidelines
+- Prefer component-based design (MonoBehaviours)
+- State management for game modes (PathDrawing etc.)
+- Mobile-optimized rendering and physics
+
+## Additional Guidelines
+- Keep existing comments when possible, especially the TODO comments.

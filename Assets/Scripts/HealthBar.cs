@@ -3,66 +3,57 @@ using UnityEngine.UI;
 
 public class HealthBar : MonoBehaviour
 {
-    [SerializeField] private Slider healthSlider;
     [SerializeField] private Health healthComponent;
-    [SerializeField] public Vector3 offset = new Vector3(0, 1.5f, 0);
-    [SerializeField] public Camera mainCamera;
-    public bool managePosition = true;
-
-    private void Awake()
-    {
-        // Debug.Log("HealthBar Awake called");
-    }
+    [SerializeField] private Canvas canvas;
+    [SerializeField] private Image fillImage;
 
     private void Start()
     {
-        Debug.Log("HealthBar Start called");
-
-        if (mainCamera == null)
-        {
-            mainCamera = Camera.main;
-        }
-
-        healthSlider = GetComponentInChildren<Slider>();
-        if (healthSlider == null)
-        {
-            Debug.LogError("Health slider not found in children of " + gameObject.name);
-        }
-
-        healthComponent = GetComponentInParent<Health>();
         if (healthComponent == null)
         {
-            Debug.LogError("Health component not found in parent of " + gameObject.name);
+            healthComponent = GetComponentInParent<Health>();
+            if (healthComponent == null)
+            {
+                Debug.LogError("Health component not found in parent of " + gameObject.name);
+                return;
+            }
         }
 
-        if (healthComponent != null)
+        if (canvas == null)
         {
-            healthComponent.OnHealthChanged += UpdateHealthBar;
-            UpdateHealthBar(healthComponent.CurrentHealth, healthComponent.MaxHealth);
-        }
-        else
-        {
-            Debug.LogError("Health component is not assigned.");
-        }
-    }
-
-    void LateUpdate()
-    {
-        // Position health bar above object
-        if (managePosition)
-        {
-            transform.position = healthComponent.transform.position + offset;
+            canvas = GetComponent<Canvas>();
+            if (canvas == null)
+            {
+                Debug.LogError("Canvas component not found on " + gameObject.name);
+                return;
+            }
         }
 
-        // Face the main camera
-        transform.rotation = mainCamera.transform.rotation;
+        if (fillImage == null)
+        {
+            Debug.LogError("Fill Image reference not set on " + gameObject.name);
+            return;
+        }
+
+        // Subscribe to health changes
+        healthComponent.OnHealthChanged += UpdateHealthBar;
+        UpdateHealthBar(healthComponent.CurrentHealth, healthComponent.MaxHealth);
     }
 
     void UpdateHealthBar(int currentHealth, int maxHealth)
     {
-        if (healthSlider != null)
+        if (fillImage == null) return;
+
+        float healthPercentage = (float)currentHealth / maxHealth;
+        fillImage.fillAmount = healthPercentage;
+    }
+
+    void LateUpdate()
+    {
+        // Keep the health bar facing the camera
+        if (Camera.main != null)
         {
-            healthSlider.value = (float)currentHealth / maxHealth;
+            transform.rotation = Camera.main.transform.rotation;
         }
     }
 

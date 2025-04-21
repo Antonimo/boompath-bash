@@ -108,15 +108,11 @@ public class SceneInfoTool : EditorWindow
         }
 
         // Display distance if exactly two objects are selected
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Distance Between Objects:");
         if (Selection.gameObjects.Length == 2)
         {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Distance Between Objects:");
             EditorGUILayout.LabelField($"{_distanceBetweenObjects:F2} units");
-        }
-        else
-        {
-            EditorGUILayout.LabelField("Select exactly two objects to measure distance.");
         }
     }
 }

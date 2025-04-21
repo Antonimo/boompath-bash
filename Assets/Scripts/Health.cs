@@ -11,6 +11,15 @@ public class Health : MonoBehaviour
     // Event to notify when health changes
     public event Action<int, int> OnHealthChanged;
 
+    private void OnValidate()
+    {
+        if (maxHealth < 0) maxHealth = 0;
+        if (currentHealth < 0) currentHealth = 0;
+        // if (currentHealth > maxHealth) currentHealth = maxHealth;
+
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
     private void Start()
     {
         currentHealth = maxHealth;

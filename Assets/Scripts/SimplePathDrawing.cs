@@ -278,9 +278,9 @@ public class SimplePathDrawing : MonoBehaviour
             {
                 Debug.Log("[SimplePathDrawing] HealthBar component found on the prefab");
                 Debug.Log("[SimplePathDrawing] Setting main camera for HealthBar");
-                healthBar.mainCamera = pathCamera;
-                healthBar.managePosition = false;
-                healthBar.offset = healthBarOffset;
+                // healthBar.mainCamera = pathCamera;
+                // healthBar.managePosition = false;
+                // healthBar.offset = healthBarOffset;
             }
             else
             {
