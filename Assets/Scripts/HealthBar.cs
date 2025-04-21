@@ -6,6 +6,7 @@ public class HealthBar : MonoBehaviour
     [SerializeField] private Health healthComponent;
     [SerializeField] private Canvas canvas;
     [SerializeField] private Image fillImage;
+    [SerializeField] private Camera targetCamera;
 
     private void Start()
     {
@@ -35,6 +36,16 @@ public class HealthBar : MonoBehaviour
             return;
         }
 
+        if (targetCamera == null)
+        {
+            targetCamera = Camera.main;
+            if (targetCamera == null)
+            {
+                Debug.LogError("No camera assigned to HealthBar and Camera.main is null");
+                return;
+            }
+        }
+
         // Subscribe to health changes
         healthComponent.OnHealthChanged += UpdateHealthBar;
         UpdateHealthBar(healthComponent.CurrentHealth, healthComponent.MaxHealth);
@@ -51,9 +62,9 @@ public class HealthBar : MonoBehaviour
     void LateUpdate()
     {
         // Keep the health bar facing the camera
-        if (Camera.main != null)
+        if (targetCamera != null)
         {
-            transform.rotation = Camera.main.transform.rotation;
+            transform.rotation = targetCamera.transform.rotation;
         }
     }
 

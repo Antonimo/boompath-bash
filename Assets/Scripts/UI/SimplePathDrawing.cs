@@ -5,14 +5,14 @@ using UnityEngine.EventSystems;
 public class SimplePathDrawing : MonoBehaviour
 {
     // References to Components
-    [SerializeField] private GameManager gameManager;
-    [SerializeField] private Camera pathCamera;
-    [SerializeField] private GameObject plane;
+    [SerializeField] private GameManager gameManager; // check intersection with enemy base
+    [SerializeField] private Camera pathCamera; // path drawing ray casting from
+    [SerializeField] private GameObject plane; // ray casting to
 
     // Input Properties
     [SerializeField] public Vector3 pathStartPosition = Vector3.zero;
 
-    // Path Drawing
+    // Path Drawing Properties
     [SerializeField] private LineRenderer pathLine;
     [SerializeField] private int maxPoints = 500;
     [SerializeField] private float minPointDistance = 0.5f;
@@ -22,43 +22,36 @@ public class SimplePathDrawing : MonoBehaviour
 
     // Path visual feedback
     [SerializeField] private Health health;
-    [SerializeField] private GameObject healthBarPrefab; // Reference to health bar prefab
+    [SerializeField] private GameObject healthBarCanvas;
     [SerializeField] private Vector3 healthBarOffset = new Vector3(0, 0, 3f); // Offset above path point
-    private GameObject _currentHealthBarInstance; // Current active health bar
-
-    // TODO: pathMarkerPrefab
-    [SerializeField] private GameObject pathMarkerPrefab;
 
     // Debugging
     [SerializeField] private bool enableDebugLogs = true;
     [SerializeField] private bool enableUpdateDebugLogs = true;
 
+    // Path Drawing State
     public List<Vector3> pathPoints { get; private set; } = new List<Vector3>();
-    private List<GameObject> pathMarkers = new List<GameObject>();
-
     private bool isDrawing = false;
     private float totalPathDistance = 0f;
-
     public float TotalPathDistance => totalPathDistance;
 
     void OnEnable()
     {
-        if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Enabled");
-
         InitializeLineRenderer();
 
         // Set initial state
         ClearPath();
+
+        DisableHealthBarCanvas();
     }
 
     void OnDisable()
     {
-        if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Disabled");
-
         ClearPath();
-        DestroyPathHealthBar();
+        DisableHealthBarCanvas();
     }
 
+    // TODO: setup the line renderer in editor and just use it without creating it here
     private void InitializeLineRenderer()
     {
         if (pathLine == null)
@@ -73,7 +66,7 @@ public class SimplePathDrawing : MonoBehaviour
             pathLine.material = new Material(Shader.Find("Sprites/Default"));
             pathLine.startColor = pathColor;
             pathLine.endColor = pathColor;
-            pathLine.material.renderQueue = 3100;
+            pathLine.material.renderQueue = 2000;
         }
     }
 
@@ -183,6 +176,9 @@ public class SimplePathDrawing : MonoBehaviour
         ClearPath();
         AddPathPoint(pathStartPosition);
         AddPathPoint(position);
+
+        EnableHealthBarCanvas();
+        SetHealthBarPosition(position);
     }
 
     private void AddPathPoint(Vector3 position)
@@ -194,6 +190,8 @@ public class SimplePathDrawing : MonoBehaviour
         {
             return;
         }
+
+        UpdatePathHealthBar(position);
 
         if (pathPoints.Count > 0)
         {
@@ -226,16 +224,6 @@ public class SimplePathDrawing : MonoBehaviour
         // Add the point
         pathPoints.Add(position);
 
-        // Create a visual marker
-        if (pathMarkerPrefab != null)
-        {
-            GameObject marker = Instantiate(pathMarkerPrefab, position, Quaternion.identity);
-            pathMarkers.Add(marker);
-        }
-
-        // Update health bar position to follow last path point
-        UpdatePathHealthBar(position);
-
         UpdatePathVisual();
 
         if (gameManager != null)
@@ -253,56 +241,6 @@ public class SimplePathDrawing : MonoBehaviour
         if (enableDebugLogs) Debug.Log($"[SimplePathDrawing] Points count: {pathPoints.Count}");
     }
 
-    private void UpdatePathHealthBar(Vector3 position)
-    {
-        if (healthBarPrefab == null) return;
-
-        if (health == null)
-        {
-            Debug.LogError("[SimplePathDrawing] Health component is not assigned");
-            return;
-        }
-
-        health.SetMaxHealth((int)maxPathDistance);
-        health.SetHealth((int)(maxPathDistance - totalPathDistance));
-
-        if (_currentHealthBarInstance == null)
-        {
-            _currentHealthBarInstance = Instantiate(healthBarPrefab);
-            // Set this gameObject as the parent of the health bar, without effecting its local position
-            _currentHealthBarInstance.transform.SetParent(transform, false);
-
-            // Set the main camera for the health bar as the path camera
-            HealthBar healthBar = _currentHealthBarInstance.GetComponent<HealthBar>();
-            if (healthBar != null)
-            {
-                Debug.Log("[SimplePathDrawing] HealthBar component found on the prefab");
-                Debug.Log("[SimplePathDrawing] Setting main camera for HealthBar");
-                // healthBar.mainCamera = pathCamera;
-                // healthBar.managePosition = false;
-                // healthBar.offset = healthBarOffset;
-            }
-            else
-            {
-                Debug.LogError("[SimplePathDrawing] HealthBar component not found on the prefab");
-            }
-            // Scale the health bar to x4
-            _currentHealthBarInstance.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-        }
-
-        // Position health bar above the last path point
-        _currentHealthBarInstance.transform.position = position + healthBarOffset;
-    }
-
-    private void DestroyPathHealthBar()
-    {
-        if (_currentHealthBarInstance != null)
-        {
-            Destroy(_currentHealthBarInstance);
-            _currentHealthBarInstance = null;
-        }
-    }
-
     private void FinishPath()
     {
         if (enableDebugLogs) Debug.Log("[SimplePathDrawing] FinishPath called");
@@ -310,7 +248,7 @@ public class SimplePathDrawing : MonoBehaviour
         isDrawing = false;
 
         // Clean up the health bar when path is finished
-        DestroyPathHealthBar();
+        DisableHealthBarCanvas();
 
         // Notify the GameManager that the path is complete
         if (gameManager != null && pathPoints.Count > 0)
@@ -338,27 +276,68 @@ public class SimplePathDrawing : MonoBehaviour
 
     public void ClearPath()
     {
+        DisableHealthBarCanvas();
+
         // Clear points
         pathPoints.Clear();
 
         totalPathDistance = 0f;
 
-        // Clear visual markers
-        foreach (GameObject marker in pathMarkers)
-        {
-            Destroy(marker);
-        }
-        pathMarkers.Clear();
-
-        // Destroy the health bar when path is cleared
-        DestroyPathHealthBar();
-
         // Reset line renderer
         if (pathLine != null)
         {
             pathLine.positionCount = 0;
-            pathLine.startColor = pathColor;
-            pathLine.endColor = pathColor;
         }
     }
+
+    #region Health Bar Canvas
+
+    private void EnableHealthBarCanvas()
+    {
+        if (healthBarCanvas != null)
+        {
+            Canvas canvas = healthBarCanvas.GetComponent<Canvas>();
+            if (canvas != null)
+            {
+                canvas.sortingOrder = 10; // Set a higher sorting order to ensure it renders on top
+            }
+            healthBarCanvas.SetActive(true);
+        }
+    }
+
+    private void DisableHealthBarCanvas()
+    {
+        if (healthBarCanvas != null)
+        {
+            healthBarCanvas.SetActive(false);
+        }
+    }
+
+    private void SetHealthBarPosition(Vector3 position)
+    {
+        if (healthBarCanvas != null && healthBarCanvas.activeSelf)
+        {
+            Vector3 newPosition = position + healthBarOffset;
+            newPosition.y = healthBarCanvas.transform.position.y;
+            healthBarCanvas.transform.position = newPosition;
+        }
+    }
+
+    private void UpdatePathHealthBar(Vector3 position)
+    {
+        if (healthBarCanvas == null) return;
+
+        if (health == null)
+        {
+            Debug.LogError("[SimplePathDrawing] Health component is not assigned");
+            return;
+        }
+
+        health.SetMaxHealth((int)maxPathDistance);
+        health.SetHealth((int)(maxPathDistance - totalPathDistance));
+
+        SetHealthBarPosition(position);
+    }
+
+    #endregion
 }

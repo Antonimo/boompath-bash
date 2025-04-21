@@ -160,7 +160,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!114 &8081445651824038029
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -193,9 +193,6 @@ MonoBehaviour:
   healthComponent: {fileID: 0}
   canvas: {fileID: 2193254249996068172}
   fillImage: {fileID: 646770909230684842}
-  heightOffsetMultiplier: 1.1
-  fullHealthColor: {r: 0, g: 1, b: 0, a: 1}
-  lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &7431128511449793747
 GameObject:
   m_ObjectHideFlags: 0
