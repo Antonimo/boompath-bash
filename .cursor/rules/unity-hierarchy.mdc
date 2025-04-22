@@ -1,0 +1,6 @@
+---
+description: Unity scene Hierarchy as context when GameObject hierarchy is relevant
+globs: 
+alwaysApply: false
+---
+In C# files for a Unity project, the file 'Assets/Documentation/HierarchyReferences.md' [HierarchyReferences.md](mdc:Assets/Documentation/HierarchyReferences.md) contains a Markdown-formatted list of GameObjects from the Unity scene Hierarchy, with top-level items in bold (e.g., '- **MainGame**') and child items indented (e.g., '  - Player1'). Attach this file to the context when the GameObject hierarchy is relevant for understanding the code.

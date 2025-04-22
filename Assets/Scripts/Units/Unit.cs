@@ -36,6 +36,14 @@ public class Unit : MonoBehaviour
     [SerializeField] private bool enableUpdateDebugLogs = false;
     [SerializeField] private bool enableFixedUpdateDebugLogs = false;
 
+    // Combat properties
+    [SerializeField] private float hitChance = 0.75f; // 70% chance to hit
+    // TODO: damage dice? properties? modifiers? buff/debuff? etc...
+    [SerializeField] private int minDamage = 10;
+    [SerializeField] private int maxDamage = 34;
+    [SerializeField] private Health health;
+
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -218,6 +226,25 @@ public class Unit : MonoBehaviour
         }
 
         return false;
+    }
+
+    public void TakeDamage(int damage)
+    {
+        health.TakeDamage(damage);
+        if (health.CurrentHealth <= 0)
+        {
+            ChangeState(new DeadState(this));
+        }
+    }
+
+    public int CalculateDamage()
+    {
+        return Random.Range(minDamage, maxDamage + 1);
+    }
+
+    public bool TryHit()
+    {
+        return Random.value <= hitChance;
     }
 
     private void DebugLog(string message)

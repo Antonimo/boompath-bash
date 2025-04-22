@@ -38,11 +38,19 @@ public class CameraManager : MonoBehaviour
     }
 
     // Switch to main gameplay camera with transition
-    public void SwitchToMainCamera()
+    public void SwitchToMainCamera(Transform targetPosition = null)
     {
         if (activeCamera != mainCamera)
         {
-            StartCoroutine(TransitionToCamera(mainCamera));
+            if (targetPosition != null)
+            {
+                StartCoroutine(TransitionToPosition(targetPosition));
+            }
+            else
+            {
+                // TODO: use game start camera position
+                StartCoroutine(TransitionToCamera(mainCamera));
+            }
         }
     }
 
@@ -58,6 +66,47 @@ public class CameraManager : MonoBehaviour
         {
             StartCoroutine(TransitionToCamera(pathDrawCamera));
         }
+    }
+
+    // Smooth transition to a specific position
+    private IEnumerator TransitionToPosition(Transform targetPosition)
+    {
+        // Make sure main camera is active
+        mainCamera.gameObject.SetActive(true);
+        if (pathDrawCamera != null) pathDrawCamera.gameObject.SetActive(false);
+        activeCamera = mainCamera;
+
+        // Store initial transform values
+        Vector3 startPos = mainCamera.transform.position;
+        Quaternion startRot = mainCamera.transform.rotation;
+        float startFOV = mainCamera.fieldOfView;
+
+        Vector3 endPos = targetPosition.position;
+        Quaternion endRot = targetPosition.rotation;
+        float endFOV = mainCamera.fieldOfView; // Keep same FOV
+
+        // Transition
+        float time = 0;
+        while (time < transitionDuration)
+        {
+            float t = time / transitionDuration;
+
+            // Smoothstep for easing
+            t = t * t * (3f - 2f * t);
+
+            // Update camera transform
+            mainCamera.transform.position = Vector3.Lerp(startPos, endPos, t);
+            mainCamera.transform.rotation = Quaternion.Slerp(startRot, endRot, t);
+            mainCamera.fieldOfView = Mathf.Lerp(startFOV, endFOV, t);
+
+            time += Time.deltaTime;
+            yield return null;
+        }
+
+        // Set final position
+        mainCamera.transform.position = endPos;
+        mainCamera.transform.rotation = endRot;
+        mainCamera.fieldOfView = endFOV;
     }
 
     // Smooth transition between cameras

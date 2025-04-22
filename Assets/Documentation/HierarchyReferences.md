@@ -1,0 +1,47 @@
+# Hierarchy References
+Below is the list of top-level GameObjects in the current scene:
+
+- **Debug Unit**
+  - HealthBarCanvas
+    - Background
+      - Fill
+- **Players**
+  - Player1
+    - Base1
+      - SpawnTo
+      - HealthBarCanvas
+        - Background
+          - Fill
+      - CameraPosition
+  - Player2
+    - Base2
+      - SpawnTo
+      - HealthBarCanvas
+        - Background
+          - Fill
+      - CameraPosition
+- **Ground**
+- **Global Volume**
+- **Directional Light**
+- **EventSystem**
+- **Debug Unit (2)**
+  - HealthBarCanvas
+    - Background
+      - Fill
+- **GameManagement**
+  - GameManager
+  - CameraManager
+- **UI**
+  - PathManager
+    - HealthBarCanvas
+      - Background
+        - Fill
+  - PlayerTurn
+  - FloatingTextManager
+- **Cameras**
+  - Free Camera
+  - Path Draw Camera
+- **Debug Unit (1)**
+  - HealthBarCanvas
+    - Background
+      - Fill

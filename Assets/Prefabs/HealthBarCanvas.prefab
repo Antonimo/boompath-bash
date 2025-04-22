@@ -193,6 +193,7 @@ MonoBehaviour:
   healthComponent: {fileID: 0}
   canvas: {fileID: 2193254249996068172}
   fillImage: {fileID: 646770909230684842}
+  targetCamera: {fileID: 0}
 --- !u!1 &7431128511449793747
 GameObject:
   m_ObjectHideFlags: 0

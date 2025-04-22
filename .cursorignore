@@ -1,0 +1,54 @@
+# Unity specific
+Library/
+Temp/
+Logs/
+UserSettings/
+obj/
+Build/
+Builds/
+*.csproj
+*.sln
+*.user
+*.userprefs
+*.pidb
+*.meta
+
+# Package related
+Packages/
+ProjectSettings/
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE specific
+.vs/
+.vscode/
+.idea/
+
+# TextMeshPro
+[Aa]ssets/TextMesh Pro/
+[Aa]ssets/TextMeshPro/
+[Aa]ssets/TextMesh Pro.meta
+[Aa]ssets/TextMeshPro.meta
+
+# Shader files
+*.shader
+*.shadergraph
+*.shadersubgraph
+
+# TextMeshPro generated files
+[Aa]ssets/TextMesh Pro/Resources/
+[Aa]ssets/TextMeshPro/Resources/
+[Aa]ssets/TextMesh Pro/Fonts/
+[Aa]ssets/TextMeshPro/Fonts/
+[Aa]ssets/TextMesh Pro/Sprites/
+[Aa]ssets/TextMeshPro/Sprites/
+
+# Material files (often modified by shaders)
+*.mat

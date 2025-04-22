@@ -88,6 +88,8 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // TODO: use FSM instead of all this?
+
     // Change to a new game state
     public void ChangeGameState(GameState newState)
     {
@@ -238,6 +240,17 @@ public class GameManager : MonoBehaviour
         if (selectedUnit != null)
         {
             selectedUnit.FollowPath(path);
+
+            // Find the current player's base camera position
+            BaseController currentBase = CurrentPlayer.GetComponentInChildren<BaseController>();
+            Transform cameraPosition = currentBase?.transform.Find("CameraPosition");
+
+            if (cameraPosition == null)
+            {
+                Debug.LogWarning("No CameraPosition found for current player's base. Using default camera position.");
+            }
+
+            cameraManager.SwitchToMainCamera(cameraPosition);
 
             // TODO: next players turn
             // ChangeGameState(GameState.PlayersTurn);
