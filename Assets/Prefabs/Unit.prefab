@@ -122,7 +122,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1332062079556125776}
   serializedVersion: 4
-  m_Mass: 3
+  m_Mass: 69.9
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -166,8 +166,8 @@ MonoBehaviour:
   enableUpdateDebugLogs: 0
   enableFixedUpdateDebugLogs: 0
   hitChance: 0.7
-  minDamage: 4
-  maxDamage: 24
+  minDamage: 71
+  maxDamage: 107
   health: {fileID: 7237998731447122316}
 --- !u!114 &7237998731447122316
 MonoBehaviour:

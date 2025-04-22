@@ -185,7 +185,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1332062079556125776, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1626699003901849359, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: IsPending
@@ -401,8 +401,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 270345441}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.13649009, y: -0.08252685, z: 0.011399377, w: -0.98713213}
-  m_LocalPosition: {x: -3.83167, y: 5.2666454, z: -20.079956}
+  m_LocalRotation: {x: -0.3318484, y: -0.02604243, z: 0.00916874, w: -0.9429287}
+  m_LocalPosition: {x: -1.7701247, y: 29.739765, z: -29.519127}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -636,13 +636,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40235806, y: -0.12244523, z: 0.05440094, w: 0.9056245}
+  m_LocalRotation: {x: 0.5289606, y: -0.4352748, z: 0.16857208, w: 0.70874536}
   m_LocalPosition: {x: 0, y: 31.78, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 47.91, y: -15.4, z: 0}
+  m_LocalEulerAnglesHint: {x: 63.708, y: -82.023, z: -30.009}
 --- !u!114 &410087042
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -785,8 +785,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2935102195fbc4b6caa5445b5a0b6af4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  currentState: 0
-  playersParent: {fileID: 872770585}
+  initialGameState: 1
+  playersParent: {fileID: 872770584}
   players: []
   currentPlayerIndex: 0
   selectedUnit: {fileID: 0}
@@ -860,7 +860,7 @@ PrefabInstance:
       objectReference: {fileID: 260143752}
     - target: {fileID: 6391904437178463554, guid: f9583dcb14390405da60c0ae60a07719, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6391904437178463554, guid: f9583dcb14390405da60c0ae60a07719, type: 3}
       propertyPath: ownerPlayer
@@ -937,7 +937,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1332062079556125776, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1626699003901849359, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: IsPending
@@ -1347,6 +1347,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: HealthBarCanvas
       objectReference: {fileID: 0}
+    - target: {fileID: 4662408986907654605, guid: 27d8cf4058d914fd5a74cd438d421b62, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5606378287246810859, guid: 27d8cf4058d914fd5a74cd438d421b62, type: 3}
       propertyPath: targetCamera
       value: 
@@ -1475,7 +1479,7 @@ Transform:
   m_GameObject: {fileID: 1159842892}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.9192622, y: 4.418248, z: -34.26451}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1814,7 +1818,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1332062079556125776, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1626699003901849359, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: IsPending

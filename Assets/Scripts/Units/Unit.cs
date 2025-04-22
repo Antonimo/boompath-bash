@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+[RequireComponent(typeof(Health))] // Ensure Health component exists
 public class Unit : MonoBehaviour
 {
     private UnitState currentState;
@@ -48,6 +49,7 @@ public class Unit : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         unitRenderer = GetComponentInChildren<Renderer>();
+        health = GetComponent<Health>(); // Get the Health component
     }
 
     void Start()
@@ -74,6 +76,21 @@ public class Unit : MonoBehaviour
         }
 
         // ChangeState(new IdleState(this));
+
+        // Subscribe to the health depleted event
+        if (health != null)
+        {
+            health.OnHealthDepleted += HandleDeath;
+        }
+    }
+
+    void OnDestroy()
+    {
+        // Unsubscribe from the health depleted event to prevent memory leaks
+        if (health != null)
+        {
+            health.OnHealthDepleted -= HandleDeath;
+        }
     }
 
     // Apply the owner's color to this unit
@@ -210,17 +227,28 @@ public class Unit : MonoBehaviour
     }
 
     // TODO: check player team is an opponent team
-    public bool CheckForEnemiesInRange(out Unit enemy)
+    // Returns true if an enemy Unit or Base is within range, providing the target component
+    public bool CheckForTargetsInRange(out Component target)
     {
-        enemy = null;
+        target = null;
 
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, enemyDetectionRange);
         foreach (var hitCollider in hitColliders)
         {
+            // Check for enemy Unit first
             Unit unit = hitCollider.GetComponent<Unit>();
-            if (unit != null && unit.ownerPlayer != ownerPlayer)
+            if (unit != null && unit.ownerPlayer != ownerPlayer && unit.IsAlive) // Check if the unit is alive
             {
-                enemy = unit;
+                target = unit;
+                return true;
+            }
+
+            // Check for enemy BaseController
+            BaseController baseController = hitCollider.GetComponent<BaseController>();
+            // TODO: Add health check for BaseController if it has one
+            if (baseController != null && baseController.OwnerPlayer != ownerPlayer)
+            {
+                target = baseController;
                 return true;
             }
         }
@@ -231,9 +259,21 @@ public class Unit : MonoBehaviour
     public void TakeDamage(int damage)
     {
         health.TakeDamage(damage);
-        if (health.CurrentHealth <= 0)
+        // The death check is now handled by the HandleDeath method via the OnHealthDepleted event
+        // if (health.CurrentHealth <= 0)
+        // {
+        //     ChangeState(new DeadState(this));
+        // }
+    }
+
+    private void HandleDeath()
+    {
+        // Prevent trying to change state if already dead or dying
+        if (currentState is not DeadState)
         {
+            DebugLog($"Unit {gameObject.name} health depleted. Changing to DeadState.");
             ChangeState(new DeadState(this));
+            IsAlive = false; // Mark as not alive
         }
     }
 

@@ -10,6 +10,7 @@ public class Health : MonoBehaviour
 
     // Event to notify when health changes
     public event Action<int, int> OnHealthChanged;
+    public event Action OnHealthDepleted;
 
     private void OnValidate()
     {
@@ -46,9 +47,19 @@ public class Health : MonoBehaviour
     public void TakeDamage(int damage)
     {
         currentHealth -= damage;
-        if (currentHealth < 0) currentHealth = 0;
+        bool healthDepleted = false;
+        if (currentHealth <= 0)
+        {
+            currentHealth = 0;
+            healthDepleted = true;
+        }
 
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+        if (healthDepleted)
+        {
+            OnHealthDepleted?.Invoke();
+        }
     }
 
     public void Heal(int amount)

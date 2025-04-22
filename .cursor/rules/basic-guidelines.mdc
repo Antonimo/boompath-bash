@@ -30,3 +30,4 @@ A 3D mobile game developed in Unity 6 where units follow player-drawn paths to a
 
 ## Unity API Guidelines
 - Use `Object.FindFirstObjectByType<T>()` instead of deprecated `Object.FindObjectOfType<T>()` for finding scene objects
+

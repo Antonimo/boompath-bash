@@ -53,4 +53,12 @@ public class Player : MonoBehaviour
             ownedUnits.Add(unit);
         }
     }
+
+    // Method to get the current count of units owned by this player
+    public int GetUnitCount()
+    {
+        // Clean up any null references (destroyed units) before counting
+        ownedUnits.RemoveAll(unit => unit == null);
+        return ownedUnits.Count;
+    }
 }

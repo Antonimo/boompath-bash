@@ -16,9 +16,12 @@ public class FollowPathState : UnitState
 
     public override void Update()
     {
-        if (unit.CheckForEnemiesInRange(out Unit enemy))
+        // Check for enemy Units or Bases
+        if (unit.CheckForTargetsInRange(out Component target))
         {
-            unit.ChangeState(new AttackState(unit, enemy, this));
+            // Transition to AttackState regardless of whether it's a Unit or Base
+            // Note: AttackState needs to handle Component target (or be adapted)
+            unit.ChangeState(new AttackState(unit, target, this));
             return;
         }
     }

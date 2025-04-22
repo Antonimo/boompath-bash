@@ -64,7 +64,12 @@ public class FloatingTextManager : MonoBehaviour
     private System.Collections.IEnumerator ReturnToPool(GameObject textObj)
     {
         yield return new WaitForSeconds(1.5f); // Wait for animation to complete
-        textObj.SetActive(false);
-        textPool.Enqueue(textObj);
+
+        // Check if the object still exists before trying to pool it
+        if (textObj != null)
+        {
+            textObj.SetActive(false);
+            textPool.Enqueue(textObj);
+        }
     }
 }

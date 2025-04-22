@@ -131,6 +131,7 @@ MonoBehaviour:
   spawnTo: {fileID: 5761600688643184849}
   unitSpawnInterval: 5
   maxUnits: 50
+  health: {fileID: 3552880290284796616}
 --- !u!114 &3552880290284796616
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -143,8 +144,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed12cb5963457495287bc1fd612a2ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
-  currentHealth: 100
+  maxHealth: 1000
+  currentHealth: 1000
 --- !u!1 &4792748428359063331
 GameObject:
   m_ObjectHideFlags: 0
@@ -169,8 +170,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4792748428359063331}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.28294677, y: 0.057504706, z: -0.016997235, w: 0.95725936}
-  m_LocalPosition: {x: -1.0243237, y: 8.526491, z: -3.5993984}
+  m_LocalRotation: {x: -0.33184847, y: -0.026042506, z: 0.00916877, w: -0.9429287}
+  m_LocalPosition: {x: -0.3361734, y: 10.84267, z: -4.222954}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

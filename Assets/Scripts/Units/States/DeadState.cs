@@ -6,6 +6,8 @@ public class DeadState : UnitState
 
     public override void Enter()
     {
+        Debug.Log($"Unit {unit.name} entering DeadState");
+
         unit.IsAlive = false;
 
         // Unfreeze X and Z rotation constraints
