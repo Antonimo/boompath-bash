@@ -31,9 +31,13 @@ public class SimplePathDrawing : MonoBehaviour
 
     // Path Drawing State
     public List<Vector3> pathPoints { get; private set; } = new List<Vector3>();
-    private bool isDrawing = false;
+    private bool isDrawing = false; // is dragging
+    private bool isFinished = false;
     private float totalPathDistance = 0f;
     public float TotalPathDistance => totalPathDistance;
+
+    // Path Editor Mode
+    public bool IsPathEditorMode { get; private set; } = false;
 
     void OnEnable()
     {
@@ -61,13 +65,20 @@ public class SimplePathDrawing : MonoBehaviour
             {
                 pathLine = gameObject.AddComponent<LineRenderer>();
             }
-            pathLine.startWidth = 0.5f;
-            pathLine.endWidth = 0.5f;
-            pathLine.material = new Material(Shader.Find("Sprites/Default"));
-            pathLine.startColor = pathColor;
-            pathLine.endColor = pathColor;
-            pathLine.material.renderQueue = 2000;
         }
+        if (pathLine == null)
+        {
+            Debug.LogError("[SimplePathDrawing] LineRenderer is not assigned");
+            return;
+        }
+
+        // pathLine.startWidth = 0.5f;
+        // pathLine.endWidth = 0.5f;
+        // pathLine.material = new Material(Shader.Find("Sprites/Default"));
+        // TODO: fix drawing lines above other objects when in path drawing mode & cameara.
+        pathLine.material.renderQueue = 2000;
+        pathLine.startColor = pathColor;
+        pathLine.endColor = pathColor;
     }
 
     void Update()
@@ -92,7 +103,7 @@ public class SimplePathDrawing : MonoBehaviour
 
                 StartPath(GetWorldPositionFromPointer(touch.position));
 
-                isDrawing = true;
+                StartDrawing();
 
                 if (enableDebugLogs) Debug.Log($"[SimplePathDrawing] Path drawing started ({isDrawing})");
             }
@@ -102,7 +113,7 @@ public class SimplePathDrawing : MonoBehaviour
 
                 StartPath(GetWorldPositionFromPointer(Input.mousePosition));
 
-                isDrawing = true;
+                StartDrawing();
 
                 if (enableDebugLogs) Debug.Log($"[SimplePathDrawing] Path drawing started ({isDrawing})");
             }
@@ -124,8 +135,7 @@ public class SimplePathDrawing : MonoBehaviour
 
                 if (touch.phase == TouchPhase.Ended)
                 {
-                    ClearPath();
-                    isDrawing = false;
+                    StopDrawing();
                 }
             }
             else
@@ -138,11 +148,29 @@ public class SimplePathDrawing : MonoBehaviour
                 {
                     if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Mouse up detected");
                     AddPathPoint(GetWorldPositionFromPointer(Input.mousePosition));
-                    ClearPath();
-                    isDrawing = false;
+
+                    StopDrawing();
                 }
             }
         }
+    }
+
+    private void StartDrawing()
+    {
+        isDrawing = true;
+        isFinished = false;
+        pathLine.startColor = pathColor;
+        pathLine.endColor = pathColor;
+    }
+
+    private void StopDrawing()
+    {
+        if (!IsPathEditorMode)
+        {
+            ClearPath();
+        }
+        isDrawing = false;
+        isFinished = false;
     }
 
     private Vector3 GetWorldPositionFromPointer(Vector3 screenPosition)
@@ -185,6 +213,8 @@ public class SimplePathDrawing : MonoBehaviour
     {
         // Ensure Y position is consistent for all points (on the ground)
         position.y = 0.1f;
+
+        if (isFinished) return;
 
         if (pathPoints.Count >= maxPoints)
         {
@@ -234,7 +264,11 @@ public class SimplePathDrawing : MonoBehaviour
 
                 FinishPath();
             }
-            Debug.Log("[SimplePathDrawing] Done checking point inside enemy base");
+            if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Done checking point inside enemy base");
+        }
+        else
+        {
+            Debug.LogWarning("[SimplePathDrawing] GameManager reference not assigned. Cannot check enemy base intersection.");
         }
 
         // Debug log count points
@@ -245,23 +279,28 @@ public class SimplePathDrawing : MonoBehaviour
     {
         if (enableDebugLogs) Debug.Log("[SimplePathDrawing] FinishPath called");
 
-        isDrawing = false;
+        isFinished = true;
 
         // Clean up the health bar when path is finished
         DisableHealthBarCanvas();
 
-        // Notify the GameManager that the path is complete
-        if (gameManager != null && pathPoints.Count > 0)
+        // Notify the GameManager that the path is complete only if not in editor mode
+        if (!IsPathEditorMode)
         {
-            if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Path completed, notifying GameManager");
-
-            // Create a new list with a copy of all path points
-            List<Vector3> pathPointsCopy = new List<Vector3>(pathPoints);
-            gameManager.ConfirmPath(pathPoints);
+            if (gameManager != null && pathPoints.Count > 0)
+            {
+                if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Path completed, notifying GameManager");
+                gameManager.ConfirmPath(pathPoints);
+            }
+            else if (gameManager == null)
+            {
+                Debug.LogError("[SimplePathDrawing] GameManager reference not assigned");
+            }
         }
-        else if (gameManager == null)
+        else
         {
-            Debug.LogError("[SimplePathDrawing] GameManager reference not assigned");
+            if (enableDebugLogs) Debug.Log("[SimplePathDrawing] Path Editor Mode is ON, not confirming path with GameManager.");
+            // Optionally, provide feedback or different behavior for editor mode completion
         }
     }
 
@@ -337,6 +376,26 @@ public class SimplePathDrawing : MonoBehaviour
         health.SetHealth((int)(maxPathDistance - totalPathDistance));
 
         SetHealthBarPosition(position);
+    }
+
+    #endregion
+
+    #region Path Editor Mode Control
+
+    public void SetPathEditorMode(bool enabled)
+    {
+        IsPathEditorMode = enabled;
+        if (enableDebugLogs) Debug.Log($"[SimplePathDrawing] Path Editor Mode set to: {IsPathEditorMode}");
+
+        // Optional: Add visual feedback if needed when editor mode is toggled
+        if (enabled)
+        {
+            // Example: Change path color or add an indicator
+        }
+        else
+        {
+            // Reset visual feedback
+        }
     }
 
     #endregion

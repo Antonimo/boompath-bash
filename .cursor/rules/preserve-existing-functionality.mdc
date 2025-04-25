@@ -1,0 +1,14 @@
+---
+description: Preserve Existing Functionality Guideline
+globs: 
+alwaysApply: false
+---
+When implementing new features or modifying code based on user requests (e.g., prompts starting with "Add...", "Implement...", "Change..."):
+
+1.  **Default Behavior is Preservation:** Assume all existing code, features, logic, and UI elements must be preserved unless the request explicitly states otherwise.
+2.  **Integrate, Don't Obliterate:** Focus on integrating the new functionality *alongside* the existing system. Modify existing code structures (classes, methods, UI layouts) only as much as necessary to accommodate the new feature. Avoid replacing entire functions or sections of code if integration is possible.
+3.  **Explicit Instruction for Removal/Replacement:** Do not remove or replace existing functionality unless:
+    *   The user explicitly asks for it (e.g., "Replace X with Y", "Remove Z").
+    *   The new feature inherently and logically supersedes the old one, making the old one redundant (e.g., implementing an advanced system that completely covers the capabilities of a simpler, existing one). In such cases, clearly state in your response that a replacement is occurring and why.
+4.  **Seek Clarification:** If a request is ambiguous about whether existing functionality should be replaced or augmented, ask for clarification before making assumptions that lead to removal.
+5.  **Minimal Edits:** When providing code changes, illustrate them as minimal additions or modifications to the existing codebase, using markers like `// ... existing code ...` to show how the new code fits in.

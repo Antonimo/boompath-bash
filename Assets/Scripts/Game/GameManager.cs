@@ -98,8 +98,28 @@ public class GameManager : MonoBehaviour
 
     public void StartNextPlayerTurn()
     {
-        currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
-        stateMachine.ChangeState(GameStateType.PlayerTurn);
+        if (players.Count == 0) return; // No players
+
+        int initialIndex = currentPlayerIndex;
+        int nextIndex = initialIndex;
+
+        do
+        {
+            nextIndex = (nextIndex + 1) % players.Count;
+            if (players[nextIndex] != null && !players[nextIndex].IsBot)
+            {
+                currentPlayerIndex = nextIndex;
+                Debug.Log($"[GameManager] Starting turn for player: {players[currentPlayerIndex].playerName}");
+                stateMachine.ChangeState(GameStateType.PlayerTurn);
+                return; // Found next non-bot player
+            }
+        } while (nextIndex != initialIndex); // Loop until we've checked all players
+
+        // If we reach here, it means all players are bots or there's only one player who is a bot.
+        // Handle this case as needed (e.g., keep the current bot player's turn, end the game, etc.)
+        Debug.Log("StartNextPlayerTurn: Could not find a non-bot player. Staying on the current player or check game logic.");
+        // Optionally, you might still want to change state if the only player is a bot:
+        // stateMachine.ChangeState(GameStateType.PlayerTurn);
     }
 
     public void SelectUnit(Unit unit)

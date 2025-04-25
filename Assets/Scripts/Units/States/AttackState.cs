@@ -17,7 +17,8 @@ public class AttackState : UnitState
     private bool hasHit; // Flag to ensure damage is applied only once per cycle
 
     // Physics parameters for dead units
-    private float deathPushForce = 842f; // Force applied to push dead units
+    // 842f
+    private float deathPushForce = 1342f; // Force applied to push dead units
 
     // Constructor accepts a Component target
     public AttackState(Unit unit, Component target, UnitState returnTo) : base(unit)

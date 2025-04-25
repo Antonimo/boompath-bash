@@ -1,18 +1,17 @@
 # Hierarchy References
 Below is the list of top-level GameObjects in the current scene:
 
-- **Ground**
-- **GameManagement**
-  - GameManager
-  - CameraManager
 - **Cameras**
   - Free Camera
   - Path Draw Camera
+- **Directional Light**
+- **EventSystem**
 - **UI**
   - PathManager
     - HealthBarCanvas
       - Background
         - Fill
+    - PathEditor
   - PlayerTurn
   - FloatingTextManager
 - **Players**
@@ -24,12 +23,16 @@ Below is the list of top-level GameObjects in the current scene:
           - Fill
       - CameraPosition
   - Player2
+    - BotLogic
     - Base2
       - SpawnTo
       - HealthBarCanvas
         - Background
           - Fill
       - CameraPosition
-- **Directional Light**
+- **GameManagement**
+  - GameManager
+  - CameraManager
+  - BotsManager
+- **Ground**
 - **Global Volume**
-- **EventSystem**

@@ -3,6 +3,7 @@ using UnityEditor;
 
 public class SceneInfoTool : EditorWindow
 {
+    private static Vector3 _sceneCameraPos = Vector3.zero;
     private static Vector3 _mouseWorldPos = Vector3.zero;
     private static Vector3 _selectedObjectScaledSize = Vector3.zero;
     private static Transform _selectedTransform;
@@ -48,6 +49,14 @@ public class SceneInfoTool : EditorWindow
             }
             _lastMouseUpdateTime = currentTime;
         }
+
+        // Update camera position
+        if (sceneView.camera != null)
+        {
+            _sceneCameraPos = sceneView.camera.transform.position;
+        }
+        // Repaint if camera moves, might be redundant if Repaint is called elsewhere
+        // Repaint();
     }
 
     private void UpdateSelectedObjectInfo()
@@ -95,6 +104,7 @@ public class SceneInfoTool : EditorWindow
 
     private void OnGUI()
     {
+        EditorGUILayout.LabelField("Scene Camera Position:", _sceneCameraPos.ToString("F2"));
         EditorGUILayout.LabelField("Mouse World Position:", _mouseWorldPos.ToString("F2"));
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Selected Object Scaled Size:");

@@ -7,7 +7,7 @@ public class Unit : MonoBehaviour
     private UnitState currentState;
     // TODO: dynamically get current state and display in Inspector
     // TODO: UI to change current state
-    [SerializeField, ReadOnly] private string _currentStateName = "None";
+    [SerializeField] private string _currentStateName = "None";
 
     public bool IsPending = true;
     public bool IsAlive = true;
