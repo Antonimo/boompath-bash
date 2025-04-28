@@ -100,7 +100,7 @@ public class Unit : MonoBehaviour
         {
             // Create a new material instance to avoid affecting other units
             Material mat = new Material(unitRenderer.material);
-            mat.color = ownerPlayer.playerColor;
+            mat.color = ownerPlayer.CurrentPlayerColor;
             unitRenderer.material = mat;
         }
     }
@@ -166,8 +166,8 @@ public class Unit : MonoBehaviour
             // Apply visual highlighting (could be outline, glow, etc.)
             // For now, let's just adjust brightness
             Color baseColor = highlight ?
-                ownerPlayer.playerColor * 1.5f : // Brighter when highlighted
-                ownerPlayer.playerColor;         // Normal color otherwise
+                ownerPlayer.CurrentPlayerColor * 1.5f : // Brighter when highlighted
+                ownerPlayer.CurrentPlayerColor;         // Normal color otherwise
 
             // Ensure color values don't exceed 1
             baseColor.r = Mathf.Clamp01(baseColor.r);

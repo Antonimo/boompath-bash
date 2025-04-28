@@ -237,7 +237,7 @@ public class BaseController : MonoBehaviour
         if (ownerPlayer != null)
         {
             // Draw a colored sphere to identify owner
-            Gizmos.color = ownerPlayer.playerColor;
+            Gizmos.color = ownerPlayer.CurrentPlayerColor;
             Gizmos.DrawWireSphere(transform.position, 1.5f);
 
             // Draw a line to the spawnTo position if assigned

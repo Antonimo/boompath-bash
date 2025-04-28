@@ -9,7 +9,7 @@ public class GameManager : MonoBehaviour
     private GameStateMachine stateMachine;
     public GameStateMachine StateMachine => stateMachine;
 
-    [SerializeField] private GameStateType initialGameState = GameStateType.GameStart;
+    [SerializeField] private GameStateType initialGameState = GameStateType.WaitingForPlayers;
 
     // Expose current state in inspector
     public GameStateType CurrentState => stateMachine?.CurrentStateType ?? GameStateType.GameStart;
@@ -51,11 +51,11 @@ public class GameManager : MonoBehaviour
             players.AddRange(playersParent.GetComponentsInChildren<Player>());
         }
 
-        if (players.Count == 0)
-        {
-            Debug.LogError("No players found in the scene. Please assign players or a players parent.");
-            return;
-        }
+        // if (players.Count == 0)
+        // {
+        //     Debug.LogError("No players found in the scene. Please assign players or a players parent.");
+        //     return;
+        // }
 
         StartCoroutine(DelayedInitialization());
     }
@@ -74,6 +74,7 @@ public class GameManager : MonoBehaviour
     {
         stateMachine = new GameStateMachine();
 
+        stateMachine.AddState(GameStateType.WaitingForPlayers, new WaitingForPlayersState(this));
         stateMachine.AddState(GameStateType.GameStart, new GameStartState(this));
         stateMachine.AddState(GameStateType.PlayerTurn, new PlayerTurnState(this));
         stateMachine.AddState(GameStateType.PathDrawing, new PathDrawingState(this));
@@ -145,7 +146,7 @@ public class GameManager : MonoBehaviour
             BaseController baseComponent = collider.GetComponent<BaseController>();
             if (baseComponent != null && baseComponent.OwnerPlayer != null)
             {
-                if (baseComponent.OwnerPlayer.teamId != CurrentPlayer.teamId)
+                if (baseComponent.OwnerPlayer.CurrentTeamId != CurrentPlayer.CurrentTeamId)
                 {
                     return true;
                 }
