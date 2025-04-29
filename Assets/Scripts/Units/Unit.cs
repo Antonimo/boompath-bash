@@ -1,15 +1,22 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 
 [RequireComponent(typeof(Health))] // Ensure Health component exists
-public class Unit : MonoBehaviour
+[RequireComponent(typeof(NetworkObject))] // Ensure NetworkObject exists
+[RequireComponent(typeof(Collider))]
+public class Unit : NetworkBehaviour
 {
     private UnitState currentState;
     // TODO: dynamically get current state and display in Inspector
     // TODO: UI to change current state
     [SerializeField] private string _currentStateName = "None";
 
+    public Vector3 spawnToPos;
+
     public bool IsPending = true;
+    // TODO: should be part of the Health component?
     public bool IsAlive = true;
     //
     //
@@ -44,47 +51,117 @@ public class Unit : MonoBehaviour
     [SerializeField] private int maxDamage = 34;
     [SerializeField] private Health health;
 
-
-    void Awake()
+    public override void OnNetworkSpawn()
     {
         rb = GetComponent<Rigidbody>();
         unitRenderer = GetComponentInChildren<Renderer>();
-        health = GetComponent<Health>(); // Get the Health component
-    }
+        health = GetComponent<Health>();
 
-    void Start()
-    {
-        DebugLog($"Unit {gameObject.name} spawned at {transform.position}");
-
-        // Auto-assign to player if not set
-        if (ownerPlayer == null)
+        // Disable physics initially
+        if (rb != null)
         {
-            // Try to find player by parent relationship
-            Player parentPlayer = GetComponentInParent<Player>();
-            if (parentPlayer != null)
-            {
-                ownerPlayer = parentPlayer;
-                ownerPlayer.AddUnit(this);
-            }
+            rb.isKinematic = true;
+        }
+        else
+        {
+            Debug.LogError($"Unit {NetworkObjectId} is missing Rigidbody component on Spawn!", this);
         }
 
-        // Set the unit's color based on the owner player's color
-        if (ownerPlayer != null && unitRenderer != null)
-        {
-            // Apply player color to the unit
-            ApplyPlayerColor();
-        }
-
-        // ChangeState(new IdleState(this));
-
-        // Subscribe to the health depleted event
+        // Subscribe to health event early
         if (health != null)
         {
             health.OnHealthDepleted += HandleDeath;
         }
+        else
+        {
+            Debug.LogError($"Unit {NetworkObjectId} is missing Health component on Spawn!", this);
+            return;
+        }
+
+        DebugLog($"Unit {NetworkObjectId} Network Spawned. Starting Parent Wait Coroutine.");
+
+        // Start the coroutine to wait for the parent and finish initialization
+        StartCoroutine(WaitForParentAndInitialize());
     }
 
-    void OnDestroy()
+    // Coroutine to wait until the parent Player component is found
+    private IEnumerator WaitForParentAndInitialize()
+    {
+        DebugLog($"Unit {NetworkObjectId} Coroutine: Waiting for parent Player...");
+        while (true) // Keep checking until found
+        {
+            Player parentPlayer = GetComponentInParent<Player>();
+            if (parentPlayer != null)
+            {
+                DebugLog($"Unit {NetworkObjectId} Coroutine: Found parent Player {parentPlayer.OwnerClientId}.");
+                ownerPlayer = parentPlayer;
+                Initialize();
+                yield break;
+            }
+
+            yield return new WaitForSeconds(0.5f);
+        }
+    }
+
+    // Contains initialization logic that depends on ownerPlayer or parent being set
+    private void Initialize()
+    {
+        DebugLog($"Unit {NetworkObjectId} Initializing with Owner Player {ownerPlayer?.OwnerClientId ?? ulong.MaxValue}.");
+
+        if (ownerPlayer == null)
+        {
+            Debug.LogError($"Unit {NetworkObjectId} Initialize called but ownerPlayer is null! Should not happen if WaitForParentAndInitialize worked.", this);
+            return; // Should not proceed without an owner
+        }
+
+        // Set the unit's color now that the owner is confirmed
+        ApplyPlayerColor();
+
+        // Setup Physics Ignore Collision with sibling Base
+        Collider ownCollider = GetComponent<Collider>();
+        if (ownCollider != null)
+        {
+            BaseController siblingBase = ownerPlayer.GetComponentInChildren<BaseController>(true); // include inactive
+            if (siblingBase != null)
+            {
+                Collider baseCollider = siblingBase.GetComponent<Collider>();
+                if (baseCollider != null)
+                {
+                    Physics.IgnoreCollision(ownCollider, baseCollider, true);
+                    DebugLog($"Unit {NetworkObjectId} ignoring collision with sibling base {siblingBase.name} locally (in Initialize).");
+                }
+                else
+                {
+                    Debug.LogWarning($"Unit {NetworkObjectId} found sibling BaseController {siblingBase.name} but it has no Collider (in Initialize).", siblingBase);
+                }
+            }
+            else
+            {
+                // This case might still occur if the parent Player object doesn't have a BaseController child
+                Debug.LogWarning($"Unit {NetworkObjectId} did not find sibling BaseController during Initialize. Check hierarchy.", this);
+            }
+        }
+        else
+        {
+            Debug.LogError($"Unit {NetworkObjectId} is missing a Collider component during Initialize!", this);
+        }
+
+        DebugLog($"Unit {NetworkObjectId} Initialization complete. Enabling physics.");
+
+        // Enable physics now that initialization is complete
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+        }
+        else
+        {
+            Debug.LogError($"Unit {NetworkObjectId} is missing Rigidbody component during Initialize!", this);
+        }
+
+        ChangeState(new GoToLocationState(this, spawnToPos));
+    }
+
+    public override void OnDestroy()
     {
         // Unsubscribe from the health depleted event to prevent memory leaks
         if (health != null)
@@ -103,11 +180,6 @@ public class Unit : MonoBehaviour
             mat.color = ownerPlayer.CurrentPlayerColor;
             unitRenderer.material = mat;
         }
-    }
-
-    public void Initialize(Vector3 spawnToPos)
-    {
-        ChangeState(new GoToLocationState(this, spawnToPos));
     }
 
     void FixedUpdate()

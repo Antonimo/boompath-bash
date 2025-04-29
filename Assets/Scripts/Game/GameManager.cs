@@ -97,6 +97,25 @@ public class GameManager : MonoBehaviour
         currentPlayerIndex = 0;
     }
 
+    public void EnableBases()
+    {
+        if (playersParent != null)
+        {
+            BaseController[] allBases = playersParent.GetComponentsInChildren<BaseController>();
+            foreach (var baseController in allBases)
+            {
+                if (baseController != null)
+                {
+                    baseController.enabled = true;
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] playersParent is not assigned. Cannot enable bases.");
+        }
+    }
+
     public void StartNextPlayerTurn()
     {
         if (players.Count == 0) return; // No players
@@ -192,5 +211,22 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogError("CameraManager is not assigned in GameManager.");
         }
+    }
+
+    // New methods for network integration
+    public void SetupLocalPlayer(Player localPlayer)
+    {
+        if (!players.Contains(localPlayer))
+        {
+            players.Add(localPlayer);
+        }
+        currentPlayerIndex = players.IndexOf(localPlayer);
+
+        Debug.Log($"[GameManager] Set up local player: {localPlayer.playerName} at index {currentPlayerIndex}");
+    }
+
+    public void StartGame()
+    {
+        stateMachine.ChangeState(GameStateType.GameStart);
     }
 }

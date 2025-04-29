@@ -1,8 +1,9 @@
 using UnityEngine;
+using Unity.Netcode;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(Health))] // Ensure Health component exists
-public class BaseController : MonoBehaviour
+public class BaseController : NetworkBehaviour
 {
     [SerializeField] private Player ownerPlayer;  // Reference to the player who owns this base
     public Player OwnerPlayer => ownerPlayer;
@@ -56,32 +57,17 @@ public class BaseController : MonoBehaviour
 
     }
 
-    void Start()
+    void OnEnable()
     {
-        // Auto-find player if not set through inspector
-        if (ownerPlayer == null)
-        {
-            // Try to find player by parent relationship
-            ownerPlayer = GetComponentInParent<Player>();
+        Debug.Log($"Base {gameObject.name} enabled.");
 
-            if (ownerPlayer == null)
-            {
-                Debug.LogError($"Base {gameObject.name} has no owner player assigned!", this);
-                return; // Cannot operate without an owner
-            }
-            else
-            {
-                Debug.Log($"Base automatically assigned to player: {ownerPlayer.playerName}");
-            }
-        }
-
-        // Spawn the first unit immediately
         SpawnUnit();
     }
 
     void Update()
     {
-        if (ownerPlayer == null) return; // Need an owner to function
+        if (!IsOwner) return; // Only server/host controls spawning
+        if (ownerPlayer == null) return;
 
         // Check if we should start the spawn timer
         // Assumes Player script has HasPendingUnits() method
@@ -89,10 +75,9 @@ public class BaseController : MonoBehaviour
         {
             spawnTimer = unitSpawnInterval;
             isSpawnTimerRunning = true;
-            Debug.Log($"Starting spawn timer ({unitSpawnInterval}s).");
+            // Debug.Log($"Starting spawn timer ({unitSpawnInterval}s).");
         }
 
-        // If the timer is running, decrement it
         if (isSpawnTimerRunning)
         {
             spawnTimer -= Time.deltaTime;
@@ -133,6 +118,8 @@ public class BaseController : MonoBehaviour
 
     void SpawnUnit()
     {
+        if (!IsServer) return; // Spawning should only happen on the server
+
         if (ownerPlayer == null)
         {
             Debug.LogError("Cannot spawn unit without an ownerPlayer!", this);
@@ -143,76 +130,115 @@ public class BaseController : MonoBehaviour
             Debug.LogError("Unit Prefab is not assigned in the inspector!", this);
             return;
         }
+        if (!CanProduceMoreUnits()) // Added check here before instantiation
+        {
+            // Debug.Log("SpawnUnit called, but cannot produce more units.");
+            return;
+        }
 
         Vector3 spawnPosition = transform.position;
+        // Instantiate the unit locally on the server first
         GameObject newUnitObject = Instantiate(unitPrefab, spawnPosition, transform.rotation);
 
-        // Set the parent to the owner player's transform
+        // Get the NetworkObject component from the instantiated object
+        NetworkObject unitNetworkObject = newUnitObject.GetComponent<NetworkObject>();
+        if (unitNetworkObject == null)
+        {
+            Debug.LogError("Spawned Unit Prefab is missing a NetworkObject component!", newUnitObject);
+            Destroy(newUnitObject); // Clean up the failed instantiation
+            return;
+        }
+
+        // Spawn the object across the network. This must be done BEFORE setting parent or modifying NetworkBehaviours.
+        // Ownership is implicitly assigned to the server here. If clients needed ownership, use SpawnWithOwnership.
+        unitNetworkObject.Spawn(true); // Pass true to automatically destroy with the scene if the server stops
+
+
+        // --- Configuration AFTER Spawning ---
+
+        // Set the parent *after* spawning. Setting parent before spawning can cause issues.
+        // Consider if parenting is strictly necessary or if owner reference is enough.
+        // Parenting networked objects can sometimes have implications. Let's keep it for now.
         newUnitObject.transform.SetParent(ownerPlayer.transform, worldPositionStays: true);
 
+
         // Add to local tracking list (consider removing if Player manages list solely)
+        // This list should probably only exist on the server if it's needed at all.
         producedUnits.Add(newUnitObject);
         // Debug.Log($"Unit spawned at {spawnPosition}. Base produced units: {producedUnits.Count}");
 
         Unit unit = newUnitObject.GetComponent<Unit>();
         if (unit != null)
         {
-            // Set the owner player on the unit
-            unit.ownerPlayer = ownerPlayer;
+            // Set the owner player on the unit - this likely needs synchronization if clients need it
+            unit.ownerPlayer = ownerPlayer; // Ensure 'unit.ownerPlayer' handles this potentially via NetworkVariable or RPC if needed elsewhere
 
-            // Register unit with the player
-            // Assumes Player script has AddUnit(Unit unit) method
+            // Register unit with the player (likely server-side logic)
             if (ownerPlayer != null)
             {
                 ownerPlayer.AddUnit(unit);
             }
 
             // Initialize unit's state and movement (this should set IsPending = true)
-            if (spawnTo != null)
-            {
-                unit.Initialize(spawnTo.position);
-            }
-            else
-            {
-                Debug.LogWarning($"SpawnTo transform not set for base {gameObject.name}. Unit initialized at base position.", this);
-                unit.Initialize(transform.position); // Initialize at base if spawnTo is missing
-            }
+            // This initialization might need to be an RPC if clients need to run it,
+            // or use NetworkVariables set here that trigger client-side logic.
+            Vector3 targetPos = (spawnTo != null) ? spawnTo.position : transform.position;
+            unit.spawnToPos = targetPos;
+            // unit.Initialize(targetPos); // Call initialize *after* spawning and setting owner
 
             // Update collision *after* Initialize has potentially set IsPending state
-            UpdateUnitCollision(newUnitObject);
+            // This logic might only be needed server-side or might need adjustment for networking.
+            // UpdateUnitCollision(newUnitObject);
         }
         else
         {
             Debug.LogError("Spawned object is missing Unit component!", newUnitObject);
-            // Clean up the failed spawn
-            Destroy(newUnitObject);
+            // Clean up the failed spawn - Despawn first if spawned!
+            if (unitNetworkObject.IsSpawned)
+            {
+                unitNetworkObject.Despawn(true);
+            }
+            else // If spawn failed before the network call
+            {
+                Destroy(newUnitObject);
+            }
             producedUnits.Remove(newUnitObject); // Remove from local list too
         }
     }
 
     // Check and update collision based on unit's isPending state
-    public void UpdateUnitCollision(GameObject unitObject)
+    // public void UpdateUnitCollision(GameObject unitObject)
+    // {
+    //     Unit unit = unitObject.GetComponent<Unit>();
+    //     Collider unitCollider = unitObject.GetComponent<Collider>();
+
+    //     // log to see if not null
+    //     // Debug.Log($"UpdateUnitCollision: BaseCollider: {baseCollider}, UnitCollider: {unitCollider}, Unit: {unit}, IsPending: {unit?.IsPending}");
+
+    //     if (baseCollider != null && unitCollider != null && unit != null)
+    //     {
+    //         // Ignore collision if the unit is pending (i.e., still inside/exiting the base)
+    //         Physics.IgnoreCollision(baseCollider, unitCollider, unit.IsPending);
+    //     }
+    // }
+
+    void OnDisable()
     {
-        Unit unit = unitObject.GetComponent<Unit>();
-        Collider unitCollider = unitObject.GetComponent<Collider>();
-
-        // log to see if not null
-        // Debug.Log($"UpdateUnitCollision: BaseCollider: {baseCollider}, UnitCollider: {unitCollider}, Unit: {unit}, IsPending: {unit?.IsPending}");
-
-        if (baseCollider != null && unitCollider != null && unit != null)
-        {
-            // Ignore collision if the unit is pending (i.e., still inside/exiting the base)
-            Physics.IgnoreCollision(baseCollider, unitCollider, unit.IsPending);
-        }
+        // Optional: Add logic here if something needs to happen when the base is disabled
+        // For example, stopping timers or coroutines explicitly.
+        Debug.Log($"Base {gameObject.name} disabled.");
+        isSpawnTimerRunning = false; // Stop the timer if disabled mid-countdown
     }
 
-    void OnDestroy()
+    public override void OnDestroy()
     {
         // Unsubscribe from the health depleted event to prevent memory leaks
         if (health != null)
         {
             health.OnHealthDepleted -= HandleDeath;
         }
+        // TODO: is this needed?
+        base.OnDestroy(); // Call base implementation
     }
 
     // Method to handle base destruction when health is depleted

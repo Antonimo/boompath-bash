@@ -1,14 +1,32 @@
 # Hierarchy References
 Below is the list of top-level GameObjects in the current scene:
 
+- **EventSystem**
+- **Cameras**
+  - Free Camera
+  - Path Draw Camera
+- **Global Volume**
+- **Network**
+  - Runtime Network Stats Monitor
+  - PlayerSpawnManager
+  - NetworkGameManager
+- **MenuCanvas**
+  - OnlineMultiplayerUI
+    - HostBtn
+      - Text (TMP)
+    - ClientBtn
+      - Text (TMP)
 - **GameManagement**
   - GameManager
   - CameraManager
   - BotsManager
+- **Players**
 - **PlayersLocations**
   - Player1
   - Player2
-- **EventSystem**
+- **Directional Light**
+- **Ground**
+- **NetworkManager**
 - **UI**
   - PathManager
     - HealthBarCanvas
@@ -17,20 +35,3 @@ Below is the list of top-level GameObjects in the current scene:
     - PathEditor
   - PlayerTurn
   - FloatingTextManager
-- **Global Volume**
-- **Directional Light**
-- **Ground**
-- **MenuCanvas**
-  - OnlineMultiplayerUI
-    - HostBtn
-      - Text (TMP)
-    - ClientBtn
-      - Text (TMP)
-- **Players**
-- **Network**
-  - Runtime Network Stats Monitor
-  - PlayerSpawnManager
-- **Cameras**
-  - Free Camera
-  - Path Draw Camera
-- **NetworkManager**

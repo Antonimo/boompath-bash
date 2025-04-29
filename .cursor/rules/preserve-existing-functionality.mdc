@@ -1,5 +1,5 @@
 ---
-description: Preserve Existing Functionality Guideline
+description: When implementing new features or modifying code based on user requests (e.g., prompts starting with "Add...", "Implement...", "Change...")
 globs: 
 alwaysApply: false
 ---

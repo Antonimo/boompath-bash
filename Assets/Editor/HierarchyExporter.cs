@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.IO;
 
+// TODO: prefabs and their hierarchy
+
 // TODO: also include the names of the Script Components attached to the GameObjects
 
 [InitializeOnLoad]

@@ -38,6 +38,9 @@ public class HostStartupManager : MonoBehaviour
         Debug.Log("HostStartupManager: Preparing to start host...");
 
         // 1. Enable PlayerSpawnManager - its OnEnable will handle callback registration.
+        // TODO: no need to make sure that ConnectionApprovalCallback is registered only for the host
+        // because its used only on the server.
+        // The OnClientConnectedCallback though is also called on the client, so we need to make sure its enabled only for the host.
         playerSpawnManager.enabled = true;
 
         // 2. Start the Host

@@ -35,6 +35,8 @@ namespace GameState
 
             gameManager.ResetToFirstPlayer();
 
+            gameManager.EnableBases();
+
             if (gameManager.EnableDebugLogs) Debug.Log("[GameStartState] Game initialized");
         }
     }

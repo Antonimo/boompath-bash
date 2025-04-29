@@ -21,9 +21,10 @@ A 3D mobile game developed in Unity 6 where units follow player-drawn paths to a
 - Follow C# naming conventions: `PascalCase` for public members, `camelCase` for private fields
 
 ### Architecture Guidelines
-- Prefer component-based design (MonoBehaviours)
+- Prefer component-based design (MonoBehaviours / NetworkBehaviours)
 - State management for game modes (PathDrawing etc.)
 - Mobile-optimized rendering and physics
+- **Single Responsibility Principle (SRP):** Each class, including `MonoBehaviour` components, should have a single, well-defined responsibility. Avoid adding logic to a class that manages interactions or states external to its primary function. Aim for high cohesion within classes and low coupling between them.
 
 ## Additional Guidelines
 - Keep existing comments when possible, especially the TODO comments.

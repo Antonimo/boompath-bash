@@ -207,6 +207,18 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 1427539202
+      objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: SceneMigrationSynchronization
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: InScenePlacedSourceGlobalObjectIdHash
+      value: 1550637099
+      objectReference: {fileID: 0}
     - target: {fileID: 7237998731447122316, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: currentHealth
       value: 100
@@ -909,6 +921,80 @@ MonoBehaviour:
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 1
+--- !u!1 &445240458
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 445240459}
+  - component: {fileID: 445240460}
+  - component: {fileID: 445240461}
+  m_Layer: 0
+  m_Name: NetworkGameManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &445240459
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445240458}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1919325525}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &445240460
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445240458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 1688957609
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &445240461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445240458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89a3d4ffa9bc349f2822ea18029d2ed7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  gameManager: {fileID: 691212229}
+  playersParent: {fileID: 872770584}
+  requiredPlayerCount: 2
 --- !u!1 &512370808
 GameObject:
   m_ObjectHideFlags: 0
@@ -1233,6 +1319,18 @@ PrefabInstance:
     - target: {fileID: 3715665002380935325, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 4040918028
+      objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: SceneMigrationSynchronization
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: InScenePlacedSourceGlobalObjectIdHash
+      value: 1550637099
       objectReference: {fileID: 0}
     - target: {fileID: 7237998731447122316, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: currentHealth
@@ -2535,6 +2633,7 @@ Transform:
   m_Children:
   - {fileID: 1065021461}
   - {fileID: 1115548363}
+  - {fileID: 445240459}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1955373278
@@ -2764,7 +2863,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 481951014644279756, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -6.8
       objectReference: {fileID: 0}
     - target: {fileID: 481951014644279756, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2772,7 +2871,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 481951014644279756, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 35.95
+      value: -20.7
       objectReference: {fileID: 0}
     - target: {fileID: 481951014644279756, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2829,6 +2928,18 @@ PrefabInstance:
     - target: {fileID: 3715665002380935325, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 1718246557
+      objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: SceneMigrationSynchronization
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6502168086566160502, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
+      propertyPath: InScenePlacedSourceGlobalObjectIdHash
+      value: 1550637099
       objectReference: {fileID: 0}
     - target: {fileID: 7237998731447122316, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
       propertyPath: currentHealth

@@ -126,6 +126,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c2f33b09980b45a7ac6793081ed4eeb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   ownerPlayer: {fileID: 0}
   unitPrefab: {fileID: 1332062079556125776, guid: f801020c1c9f04e0aaa892dd8440c5ab, type: 3}
   spawnTo: {fileID: 5761600688643184849}
