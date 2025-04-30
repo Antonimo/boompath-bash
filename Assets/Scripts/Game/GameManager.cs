@@ -177,9 +177,19 @@ public class GameManager : MonoBehaviour
     // Called when path drawing is completed
     public void ConfirmPath(List<Vector3> path)
     {
-        if (selectedUnit != null)
+        if (selectedUnit != null && CurrentPlayer != null)
         {
-            selectedUnit.FollowPath(path);
+            // selectedUnit.FollowPath(path); // Old direct call
+
+            // NEW: Call the method on the CurrentPlayer (which must be the local player)
+            // This will trigger the ServerRpc flow.
+            Debug.Log($"[GameManager] ConfirmPath: Requesting path assignment for Unit {selectedUnit.NetworkObjectId} via CurrentPlayer {CurrentPlayer.OwnerClientId}.");
+            CurrentPlayer.RequestUnitPathAssignment(selectedUnit.NetworkObjectId, path);
+        }
+        else
+        {
+            if (selectedUnit == null) Debug.LogWarning("[GameManager] ConfirmPath called but selectedUnit is null.");
+            if (CurrentPlayer == null) Debug.LogWarning("[GameManager] ConfirmPath called but CurrentPlayer is null.");
         }
 
         stateMachine.ChangeState(GameStateType.PlayerTurnEnd);

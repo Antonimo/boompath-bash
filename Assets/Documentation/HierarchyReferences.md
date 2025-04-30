@@ -2,30 +2,20 @@
 Below is the list of top-level GameObjects in the current scene:
 
 - **EventSystem**
+- **Directional Light**
 - **Cameras**
   - Free Camera
   - Path Draw Camera
+- **Players**
+- **GameManagement**
+  - GameManager
+  - CameraManager
+  - BotsManager
 - **Global Volume**
 - **Network**
   - Runtime Network Stats Monitor
   - PlayerSpawnManager
   - NetworkGameManager
-- **MenuCanvas**
-  - OnlineMultiplayerUI
-    - HostBtn
-      - Text (TMP)
-    - ClientBtn
-      - Text (TMP)
-- **GameManagement**
-  - GameManager
-  - CameraManager
-  - BotsManager
-- **Players**
-- **PlayersLocations**
-  - Player1
-  - Player2
-- **Directional Light**
-- **Ground**
 - **NetworkManager**
 - **UI**
   - PathManager
@@ -35,3 +25,13 @@ Below is the list of top-level GameObjects in the current scene:
     - PathEditor
   - PlayerTurn
   - FloatingTextManager
+- **MenuCanvas**
+  - OnlineMultiplayerUI
+    - HostBtn
+      - Text (TMP)
+    - ClientBtn
+      - Text (TMP)
+- **PlayersLocations**
+  - Player1
+  - Player2
+- **Ground**

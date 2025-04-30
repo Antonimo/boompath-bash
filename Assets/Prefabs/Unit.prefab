@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 1626699003901849359}
   - component: {fileID: 7237998731447122316}
   - component: {fileID: 4622952311569197962}
+  - component: {fileID: -6346141298814775893}
   m_Layer: 8
   m_Name: Unit
   m_TagString: Untagged
@@ -181,17 +182,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  _currentStateName: None
-  spawnToPos: {x: 0, y: 0, z: 0}
+  OwnerPlayerId:
+    m_InternalValue: 0
+  NetworkCurrentState:
+    m_InternalValue: 0
   IsPending: 1
   IsAlive: 1
   moveSpeed: 5
   enemyDetectionRange: 1.56
-  ownerPlayer: {fileID: 0}
   path: []
   currentPathIndex: 0
-  isMoving: 0
-  enableDebugLogs: 0
+  enableDebugLogs: 1
   enableUpdateDebugLogs: 0
   enableFixedUpdateDebugLogs: 0
   hitChance: 0.7
@@ -236,7 +237,7 @@ MonoBehaviour:
   RotationMaxInterpolationTime: 0.1
   ScaleLerpSmoothing: 1
   ScaleMaxInterpolationTime: 0.1
-  AuthorityMode: 1
+  AuthorityMode: 0
   TickSyncChildren: 0
   UseUnreliableDeltas: 0
   SyncPositionX: 1
@@ -258,6 +259,23 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
+--- !u!114 &-6346141298814775893
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1332062079556125776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6c0be61502bb534f922ebb746851216, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  NetworkRigidbodyBaseExpanded: 0
+  UseRigidBodyForMotion: 1
+  AutoUpdateKinematicState: 1
+  AutoSetKinematicOnDespawn: 1
 --- !u!1001 &8631450917766315618
 PrefabInstance:
   m_ObjectHideFlags: 0

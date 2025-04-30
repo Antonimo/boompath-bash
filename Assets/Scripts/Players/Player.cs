@@ -97,7 +97,6 @@ public class Player : NetworkBehaviour
     {
         if (!ownedUnits.Contains(unit))
         {
-            unit.ownerPlayer = this;
             ownedUnits.Add(unit);
         }
     }
@@ -109,5 +108,75 @@ public class Player : NetworkBehaviour
         ownedUnits.RemoveAll(unit => unit == null);
         return ownedUnits.Count;
     }
+
+    // --- Path Assignment RPC Flow ---
+
+    /// <summary>
+    /// Client-side method called by GameManager when the player confirms a path for a specific unit.
+    /// </summary>
+    /// <param name="unitNetworkId">The NetworkObjectId of the unit to assign the path to.</param>
+    /// <param name="pathPoints">The list of Vector3 points defining the path.</param>
+    public void RequestUnitPathAssignment(ulong unitNetworkId, List<Vector3> pathPoints)
+    {
+        // This method executes on the *local* client instance of the Player.
+        if (!IsOwner)
+        {
+            Debug.LogError($"RequestUnitPathAssignment called on Player object that is not the owner! OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}");
+            return;
+        }
+
+        if (unitNetworkId == 0)
+        {
+            Debug.LogWarning($"[Player {OwnerClientId} Client] RequestUnitPathAssignment called with invalid unitNetworkId (0).");
+            return;
+        }
+
+        if (pathPoints == null || pathPoints.Count < 2) // Need at least start and one point
+        {
+            Debug.LogWarning($"[Player {OwnerClientId} Client] RequestUnitPathAssignment called for Unit {unitNetworkId} with invalid path (null or < 2 points).");
+            return;
+        }
+
+        Debug.Log($"[Player {OwnerClientId} Client] Calling AssignPathToServerRpc for Unit {unitNetworkId} with {pathPoints.Count} points.");
+        // Call the ServerRpc, passing the ID of the unit and the path points.
+        AssignPathToServerRpc(unitNetworkId, pathPoints.ToArray());
+    }
+
+    [ServerRpc]
+    private void AssignPathToServerRpc(ulong unitNetworkId, Vector3[] pathArray)
+    {
+        // This code executes ONLY on the server instance of this Player object.
+        Debug.Log($"[Player {OwnerClientId} Server] Received AssignPathToServerRpc for Unit {unitNetworkId}.");
+
+        // Find the target Unit's NetworkObject on the server
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(unitNetworkId, out NetworkObject unitNetworkObject))
+        {
+            Unit targetUnit = unitNetworkObject.GetComponent<Unit>();
+            if (targetUnit != null)
+            {
+                // --- Security/Ownership Check ---
+                // Verify that the Player sending this RPC actually owns the target unit.
+                if (targetUnit.OwnerPlayerId.Value == this.NetworkObjectId)
+                {
+                    Debug.Log($"[Player {OwnerClientId} Server] Ownership confirmed. Calling FollowPath on Unit {unitNetworkId}.");
+                    // Call the Unit's method to process the path (this will run server-side)
+                    targetUnit.FollowPath(new List<Vector3>(pathArray));
+                }
+                else
+                {
+                    Debug.LogError($"[Player {OwnerClientId} Server] Security violation: Tried to submit path for Unit {unitNetworkId}, but unit owner is {targetUnit.OwnerPlayerId.Value}, not {this.NetworkObjectId}. Ignoring.");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[Player {OwnerClientId} Server] Found NetworkObject for Unit {unitNetworkId}, but it has no Unit component. Ignoring path.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[Player {OwnerClientId} Server] Could not find spawned NetworkObject for Unit {unitNetworkId}. Unit might have been destroyed before path arrived. Ignoring path.");
+        }
+    }
+    // --- End Path Assignment RPC Flow ---
 
 }

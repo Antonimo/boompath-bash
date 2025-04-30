@@ -2,75 +2,114 @@ using UnityEngine;
 
 public class AttackState : UnitState
 {
-    // Store the target component and its relevant sub-components
-    private Component targetComponent;
-    private Health targetHealth;
-    private Transform targetTransform; // For positioning effects like floating text
+    // --- Server-Side Data ---
+    private Component _serverTargetComponent;
+    private Health _serverTargetHealth;
+    private Transform _serverTargetTransform;
+    private UnitState _serverReturnState; // State to return to when finished/target lost (Server only)
+    private float _attackStartTime;
+    private bool _hasHit; // Flag to ensure damage is applied only once per cycle (Server only)
 
-    private UnitState returnState; // State to return to when finished/target lost
-    private FloatingTextManager floatingTextManager;
+    // --- Client-Side Data (or shared) ---
+    // TODO: Sync target via NetworkVariable<ulong> AttackTargetId on Unit
+    private ulong _syncedTargetId = 0; // Populated from NV on client
+    private Transform _clientTargetTransform; // Cached from synced ID on client
+    private FloatingTextManager _floatingTextManager;
 
     // Attack timing parameters
     private float attackDuration = 1.0f; // Duration of the attack animation/cycle
     private float hitPoint = 0.5f;       // Point in the cycle where damage is applied (0-1)
-    private float attackStartTime;
-    private bool hasHit; // Flag to ensure damage is applied only once per cycle
 
     // Physics parameters for dead units
-    // 842f
     private float deathPushForce = 1342f; // Force applied to push dead units
 
-    // Constructor accepts a Component target
+    // Server-side constructor
     public AttackState(Unit unit, Component target, UnitState returnTo) : base(unit)
     {
-        this.targetComponent = target;
-        this.returnState = returnTo;
+        // This constructor is primarily for the SERVER
+        if (!unit.IsServer)
+        {
+            Debug.LogError($"Server AttackState constructor called on client!", unit);
+            // Fallback or error handling?
+        }
 
-        // Try to get essential components from the target
+        this._serverTargetComponent = target;
+        this._serverReturnState = returnTo;
+
         if (target != null)
         {
-            this.targetHealth = target.GetComponent<Health>();
-            this.targetTransform = target.transform; // Get the transform
+            this._serverTargetHealth = target.GetComponent<Health>();
+            this._serverTargetTransform = target.transform; // Get the transform
         }
 
-        // Find the FloatingTextManager instance in the scene
-        // Consider using a singleton pattern or dependency injection for better management
-        this.floatingTextManager = UnityEngine.Object.FindFirstObjectByType<FloatingTextManager>();
+        FindFloatingTextManager(); // Can be found by both
 
-        // Log errors if essential components are missing
-        if (this.targetComponent == null)
+        // Server logs errors
+        if (unit.IsServer)
         {
-            Debug.LogError($"AttackState initialized with a null target.", unit);
+            if (this._serverTargetComponent == null) Debug.LogError($"[Server] AttackState initialized with a null target.", unit);
+            if (this._serverTargetHealth == null) Debug.LogError($"[Server] AttackState target '{target?.name}' does not have a Health component.", target);
+            if (this._serverTargetTransform == null) Debug.LogError($"[Server] AttackState target '{target?.name}' does not have a Transform component.", target);
         }
-        if (this.targetHealth == null)
+    }
+
+    // Client-side constructor (Placeholder - needs target ID sync)
+    // Called via OnNetworkStateChanged
+    public AttackState(Unit unit) : base(unit)
+    {
+        if (unit.IsServer)
         {
-            Debug.LogError($"AttackState target '{target?.name}' does not have a Health component.", target);
+            Debug.LogError($"Client AttackState constructor called on Server!", unit);
         }
-        if (this.targetTransform == null)
-        {
-            Debug.LogError($"AttackState target '{target?.name}' does not have a Transform component.", target);
-        }
+        FindFloatingTextManager();
+        // TODO: Get synced _syncedTargetId from Unit NetworkVariable
+        // TODO: Find _clientTargetTransform using _syncedTargetId
+    }
+
+    private void FindFloatingTextManager()
+    {
+        this._floatingTextManager = UnityEngine.Object.FindFirstObjectByType<FloatingTextManager>();
     }
 
     public override void Enter()
     {
-        // Check if the target is valid before starting the attack
-        if (targetComponent == null || targetHealth == null || targetHealth.CurrentHealth <= 0)
+        // Debug.Log($"[{ (unit.IsServer ? "Server" : "Client") }] Unit {unit.NetworkObjectId} Entering AttackState");
+        if (unit.IsServer)
         {
-            Debug.LogWarning($"AttackState: Target '{targetComponent?.name}' is invalid or already dead on Enter. Returning to previous state.", unit);
-            unit.ChangeState(returnState);
-            return;
+            // Server validates target and starts attack cycle
+            if (_serverTargetComponent == null || _serverTargetHealth == null || _serverTargetHealth.CurrentHealth <= 0)
+            {
+                Debug.LogWarning($"[Server] AttackState: Target '{_serverTargetComponent?.name}' is invalid or already dead on Enter. Returning to previous state: {_serverReturnState?.GetType().Name ?? "null"}.", unit);
+                unit.ChangeState(_serverReturnState ?? new IdleState(unit)); // Return or Idle if null
+                return;
+            }
+
+            _attackStartTime = Time.time;
+            _hasHit = false;
+            Debug.Log($"[Server] Unit {unit.name} entering AttackState against {_serverTargetComponent.name}", unit);
+
+            // TODO: Set Unit's AttackTargetId NetworkVariable
+            // if (_serverTargetComponent.TryGetComponent<NetworkObject>(out var targetNetObj)){
+            //     unit.AttackTargetId.Value = targetNetObj.NetworkObjectId;
+            // }
+
+            // Orient the unit towards the target (server authoritative rotation)
+            RotateTowardsTarget(_serverTargetTransform);
         }
-
-        attackStartTime = Time.time;
-        hasHit = false;
-        // TODO: Play attack animation specific to the attacker (unit)
-        Debug.Log($"Unit {unit.name} entering AttackState against {targetComponent.name}", unit);
-
-        // Orient the unit towards the target
-        if (targetTransform != null)
+        else
         {
-            Vector3 directionToTarget = (targetTransform.position - unit.transform.position);
+            // Client tries to find target based on (future) synced ID
+            // TODO: Find _clientTargetTransform using _syncedTargetId
+            // TODO: Play attack animation specific to the attacker (unit)
+        }
+    }
+
+    // Helper for server rotation
+    private void RotateTowardsTarget(Transform target)
+    {
+        if (target != null)
+        {
+            Vector3 directionToTarget = (target.position - unit.transform.position);
             directionToTarget.y = 0; // Keep rotation horizontal
             if (directionToTarget != Vector3.zero)
             {
@@ -81,119 +120,141 @@ public class AttackState : UnitState
 
     public override void Update()
     {
-        // Constantly check if the target is still valid and alive
-        if (targetComponent == null || targetHealth == null || targetHealth.CurrentHealth <= 0)
+        // Server manages the attack cycle and state transitions
+        if (unit.IsServer)
         {
-            Debug.Log($"AttackState: Target '{targetComponent?.name}' lost or dead. Returning to state: {returnState.GetType().Name}", unit);
-            unit.ChangeState(returnState);
-            return;
-        }
-
-        // Keep facing the target
-        if (targetTransform != null)
-        {
-            Vector3 directionToTarget = (targetTransform.position - unit.transform.position);
-            directionToTarget.y = 0;
-            if (directionToTarget != Vector3.zero)
+            // Constantly check if the target is still valid and alive
+            if (_serverTargetComponent == null || _serverTargetHealth == null || _serverTargetHealth.CurrentHealth <= 0)
             {
-                unit.RotateTowards(directionToTarget.normalized);
+                Debug.Log($"[Server] AttackState: Target '{_serverTargetComponent?.name}' lost or dead. Returning to state: {_serverReturnState?.GetType().Name ?? "null"}", unit);
+                unit.ChangeState(_serverReturnState ?? new IdleState(unit));
+                return;
+            }
+
+            // Keep facing the target (server authoritative rotation)
+            RotateTowardsTarget(_serverTargetTransform);
+
+            float elapsedTime = Time.time - _attackStartTime;
+            float normalizedTime = elapsedTime / attackDuration;
+
+            // Apply damage at the hit point in the attack cycle
+            if (!_hasHit && normalizedTime >= hitPoint)
+            {
+                AttemptAttackServer();
+                _hasHit = true; // Mark that damage has been applied for this cycle
+            }
+
+            // Check if the attack cycle is complete
+            if (normalizedTime >= 1.0f)
+            {
+                // If target is still alive, restart the attack cycle
+                if (_serverTargetHealth.CurrentHealth > 0)
+                {
+                    // Re-enter state to reset timers and attack again
+                    // Note: Direct re-entry might skip Exit/Enter logic needed elsewhere.
+                    // Consider changing state back to AttackState for proper lifecycle?
+                    // For now, mimicking original logic:
+                    _attackStartTime = Time.time;
+                    _hasHit = false;
+                    Debug.Log($"[Server] Unit {unit.name} restarting attack cycle against {_serverTargetComponent.name}", unit);
+
+                    // Enter(); // Re-enter state to reset timers and attack again
+                }
+                else
+                {
+                    // Target died during this cycle, return to the previous state
+                    unit.ChangeState(_serverReturnState ?? new IdleState(unit));
+                }
             }
         }
-
-
-        float elapsedTime = Time.time - attackStartTime;
-        float normalizedTime = elapsedTime / attackDuration;
-
-        // Apply damage at the hit point in the attack cycle
-        if (!hasHit && normalizedTime >= hitPoint)
+        else // Client-side update
         {
-            AttemptAttack();
-            hasHit = true; // Mark that damage has been applied for this cycle
-        }
-
-        // Check if the attack cycle is complete
-        if (normalizedTime >= 1.0f)
-        {
-            // If target is still alive, restart the attack cycle
-            if (targetHealth.CurrentHealth > 0)
-            {
-                Enter(); // Re-enter state to reset timers and attack again
-            }
-            else
-            {
-                // Target died during this cycle, return to the previous state
-                unit.ChangeState(returnState);
-            }
+            // TODO: Smoothly rotate towards _clientTargetTransform?
+            // TODO: Update animations based on timing?
         }
     }
 
-    private void AttemptAttack()
+    // Renamed to clarify it's server-only
+    private void AttemptAttackServer()
     {
-        if (targetHealth == null || targetTransform == null) return; // Should not happen if Enter checks passed
+        if (!unit.IsServer) return;
+        if (_serverTargetHealth == null || _serverTargetTransform == null) return; // Should not happen if Enter checks passed
 
-        // Try to hit based on unit's hit chance
-        if (unit.TryHit())
+        bool didHit = unit.TryHit();
+        string resultText = "MISS";
+
+        if (didHit)
         {
             // Calculate damage and record health before applying
             int damage = unit.CalculateDamage();
-            int previousHealth = targetHealth.CurrentHealth;
-            targetHealth.TakeDamage(damage);
-            Debug.Log($"Unit {unit.name} HIT {targetComponent.name} for {damage} damage. Health: {targetHealth.CurrentHealth}/{targetHealth.MaxHealth}", unit);
-
-            // Show damage floating text
-            if (floatingTextManager != null)
-            {
-                floatingTextManager.ShowText(targetTransform.position, damage.ToString(), true);
-            }
+            int previousHealth = _serverTargetHealth.CurrentHealth;
+            _serverTargetHealth.TakeDamage(damage);
+            resultText = damage.ToString();
+            Debug.Log($"[Server] Unit {unit.name} HIT {_serverTargetComponent.name} for {damage} damage. Health: {_serverTargetHealth.CurrentHealth}/{_serverTargetHealth.MaxHealth}", unit);
 
             // Check if this hit killed the target *and* if the target is a Unit
-            if (previousHealth > 0 && targetHealth.CurrentHealth <= 0 && targetComponent is Unit deadUnit)
+            if (previousHealth > 0 && _serverTargetHealth.CurrentHealth <= 0 && _serverTargetComponent is Unit deadUnit)
             {
-                ApplyDeathPush(deadUnit);
+                ApplyDeathPushServer(deadUnit);
             }
         }
         else
         {
-            Debug.Log($"Unit {unit.name} MISSED {targetComponent.name}", unit);
-            // Show miss floating text
-            if (floatingTextManager != null)
-            {
-                floatingTextManager.ShowText(targetTransform.position, "MISS", false);
-            }
+            Debug.Log($"[Server] Unit {unit.name} MISSED {_serverTargetComponent.name}", unit);
+        }
+
+        // TODO: Send ClientRpc to show floating text
+        // ShowFloatingTextClientRpc(_serverTargetTransform.position, resultText, didHit);
+        // Temporary local call for testing:
+        ShowFloatingText(_serverTargetTransform.position, resultText, didHit);
+
+    }
+
+    // Placeholder for ClientRpc
+    // [ClientRpc]
+    // private void ShowFloatingTextClientRpc(Vector3 position, string text, bool isHit)
+    // {
+    //     ShowFloatingText(position, text, isHit);
+    // }
+
+    // Actual logic to show floating text (runs on clients via RPC, or server locally)
+    private void ShowFloatingText(Vector3 position, string text, bool isHit)
+    {
+        if (_floatingTextManager != null)
+        {
+            _floatingTextManager.ShowText(position, text, isHit);
         }
     }
 
-    // Apply physics push effect only to Units upon death
-    private void ApplyDeathPush(Unit deadUnit)
+
+    // Renamed to clarify it's server-only
+    private void ApplyDeathPushServer(Unit deadUnit)
     {
+        if (!unit.IsServer) return;
+
         Rigidbody targetRb = deadUnit.GetComponent<Rigidbody>();
         if (targetRb != null)
         {
-            // Calculate horizontal direction (XZ only)
             Vector3 horizontal = deadUnit.transform.position - unit.transform.position;
             horizontal.y = 0;
             horizontal.Normalize();
-
-            // Calculate push direction with upward angle
             Vector3 pushDirection = (horizontal + Vector3.up * 2f).normalized;
 
-            // Apply the push force and torque
             targetRb.AddForce(pushDirection * deathPushForce, ForceMode.Impulse);
-
-            // Add random rotation torque
-            Vector3 randomTorque = new Vector3(
-                Random.Range(-1f, 1f),
-                Random.Range(-1f, 1f),
-                Random.Range(-1f, 1f)
-            ).normalized * deathPushForce * 0.5f; // Reduce torque magnitude slightly
+            Vector3 randomTorque = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * deathPushForce * 0.5f;
             targetRb.AddTorque(randomTorque, ForceMode.Impulse);
-            Debug.Log($"Applied death push to {deadUnit.name}", unit);
+            Debug.Log($"[Server] Applied death push to {deadUnit.name}", unit);
         }
     }
 
     public override void Exit()
     {
-        Debug.Log($"Unit {unit.name} exiting AttackState. Was attacking {targetComponent?.name}", unit);
-        // TODO: Stop attack animation
+        Debug.Log($"[{(unit.IsServer ? "Server" : "Client")}] Unit {unit.NetworkObjectId} Exiting AttackState. Was attacking {_serverTargetComponent?.name ?? _syncedTargetId.ToString()}", unit);
+        // TODO: Stop attack animation (client-side)
+        if (unit.IsServer)
+        {
+            // TODO: Clear Unit's AttackTargetId NetworkVariable
+            // unit.AttackTargetId.Value = 0;
+        }
     }
 }

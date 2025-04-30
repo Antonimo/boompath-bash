@@ -120,6 +120,9 @@ public class BaseController : NetworkBehaviour
     {
         if (!IsServer) return; // Spawning should only happen on the server
 
+        // Log spawnTo.position
+        Debug.Log($"SpawnUnit: spawnTo.position: {spawnTo.position}");
+
         if (ownerPlayer == null)
         {
             Debug.LogError("Cannot spawn unit without an ownerPlayer!", this);
@@ -140,6 +143,8 @@ public class BaseController : NetworkBehaviour
         // Instantiate the unit locally on the server first
         GameObject newUnitObject = Instantiate(unitPrefab, spawnPosition, transform.rotation);
 
+        Debug.Log($"SpawnUnit: newUnitObject: {newUnitObject}");
+
         // Get the NetworkObject component from the instantiated object
         NetworkObject unitNetworkObject = newUnitObject.GetComponent<NetworkObject>();
         if (unitNetworkObject == null)
@@ -153,47 +158,16 @@ public class BaseController : NetworkBehaviour
         // Ownership is implicitly assigned to the server here. If clients needed ownership, use SpawnWithOwnership.
         unitNetworkObject.Spawn(true); // Pass true to automatically destroy with the scene if the server stops
 
+        Debug.Log($"Spawned Unit {unitNetworkObject.NetworkObjectId}");
 
         // --- Configuration AFTER Spawning ---
 
-        // Set the parent *after* spawning. Setting parent before spawning can cause issues.
-        // Consider if parenting is strictly necessary or if owner reference is enough.
-        // Parenting networked objects can sometimes have implications. Let's keep it for now.
-        newUnitObject.transform.SetParent(ownerPlayer.transform, worldPositionStays: true);
-
-
-        // Add to local tracking list (consider removing if Player manages list solely)
-        // This list should probably only exist on the server if it's needed at all.
-        producedUnits.Add(newUnitObject);
-        // Debug.Log($"Unit spawned at {spawnPosition}. Base produced units: {producedUnits.Count}");
-
+        // Get the Unit component AFTER spawning
         Unit unit = newUnitObject.GetComponent<Unit>();
-        if (unit != null)
-        {
-            // Set the owner player on the unit - this likely needs synchronization if clients need it
-            unit.ownerPlayer = ownerPlayer; // Ensure 'unit.ownerPlayer' handles this potentially via NetworkVariable or RPC if needed elsewhere
-
-            // Register unit with the player (likely server-side logic)
-            if (ownerPlayer != null)
-            {
-                ownerPlayer.AddUnit(unit);
-            }
-
-            // Initialize unit's state and movement (this should set IsPending = true)
-            // This initialization might need to be an RPC if clients need to run it,
-            // or use NetworkVariables set here that trigger client-side logic.
-            Vector3 targetPos = (spawnTo != null) ? spawnTo.position : transform.position;
-            unit.spawnToPos = targetPos;
-            // unit.Initialize(targetPos); // Call initialize *after* spawning and setting owner
-
-            // Update collision *after* Initialize has potentially set IsPending state
-            // This logic might only be needed server-side or might need adjustment for networking.
-            // UpdateUnitCollision(newUnitObject);
-        }
-        else
+        if (unit == null)
         {
             Debug.LogError("Spawned object is missing Unit component!", newUnitObject);
-            // Clean up the failed spawn - Despawn first if spawned!
+            // Clean up the failed spawn - Despawn first!
             if (unitNetworkObject.IsSpawned)
             {
                 unitNetworkObject.Despawn(true);
@@ -202,25 +176,31 @@ public class BaseController : NetworkBehaviour
             {
                 Destroy(newUnitObject);
             }
-            producedUnits.Remove(newUnitObject); // Remove from local list too
+            return; // Stop further processing for this unit
         }
+
+        // *** Call InitializeOwnerPlayer immediately after getting the component ***
+        // This sets the local owner and replicates the OwnerPlayerId NetworkVariable.
+        unit.InitializeOwnerPlayer(ownerPlayer);
+
+        // Set the parent *after* spawning and initializing owner.
+        // Consider if parenting is strictly necessary or if owner reference is enough.
+        // Parenting networked objects can sometimes have implications. Let's keep it for now.
+        newUnitObject.transform.SetParent(ownerPlayer.transform, worldPositionStays: true);
+
+        // Add to local tracking list (consider removing if Player manages list solely)
+        // This list should probably only exist on the server if it's needed at all.
+        producedUnits.Add(newUnitObject);
+        // Debug.Log($"Unit spawned at {spawnPosition}. Base produced units: {producedUnits.Count}");
+
+        // Register unit with the player (likely server-side logic)
+        if (ownerPlayer != null)
+        {
+            ownerPlayer.AddUnit(unit);
+        }
+
+        unit.ChangeState(new GoToLocationState(unit, spawnTo.position));
     }
-
-    // Check and update collision based on unit's isPending state
-    // public void UpdateUnitCollision(GameObject unitObject)
-    // {
-    //     Unit unit = unitObject.GetComponent<Unit>();
-    //     Collider unitCollider = unitObject.GetComponent<Collider>();
-
-    //     // log to see if not null
-    //     // Debug.Log($"UpdateUnitCollision: BaseCollider: {baseCollider}, UnitCollider: {unitCollider}, Unit: {unit}, IsPending: {unit?.IsPending}");
-
-    //     if (baseCollider != null && unitCollider != null && unit != null)
-    //     {
-    //         // Ignore collision if the unit is pending (i.e., still inside/exiting the base)
-    //         Physics.IgnoreCollision(baseCollider, unitCollider, unit.IsPending);
-    //     }
-    // }
 
     void OnDisable()
     {
