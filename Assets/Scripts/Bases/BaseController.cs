@@ -2,31 +2,36 @@ using UnityEngine;
 using Unity.Netcode;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(Health))] // Ensure Health component exists
 public class BaseController : NetworkBehaviour
 {
-    [SerializeField] private Player ownerPlayer;  // Reference to the player who owns this base
+    [Header("Dependencies")]
+    [SerializeField] private Player ownerPlayer;
     public Player OwnerPlayer => ownerPlayer;
-
-    public GameObject unitPrefab;    // Reference to the Unit Prefab
-    public Transform spawnTo;        // Where the spawned Unit will go when coming out of the base
+    [SerializeField] private GameObject unitPrefab;
+    [SerializeField] private Transform spawnTo; // Where the spawned Unit will go when coming out of the base
+    [SerializeField] private Health health;
 
     [Header("Unit Production")]
-    public float unitSpawnInterval = 5f;  // Time between unit spawns
-    public int maxUnits = 50;             // Maximum number of units player can have
+    [SerializeField] private float unitSpawnInterval = 5f;  // Time between unit spawns
+    [SerializeField] private int maxUnits = 50;             // Maximum number of units player can have
+
+    [Header("Debug Logging")]
+    [SerializeField] private bool enableDebugLogs = false;
+    [SerializeField] private bool enableUpdateDebugLogs = false; // Separate toggle for potentially noisy Update logs
 
     private float spawnTimer = 0f;        // Timer for next spawn
     private bool isSpawnTimerRunning = false; // Tracks if spawn cooldown is active
     // TODO: If Player script reliably manages the unit list, this local list might be redundant.
     private List<GameObject> producedUnits = new List<GameObject>(); // List of units produced by *this* base
-
     private Collider baseCollider;
-    [SerializeField] private Health health;
 
     void Awake() // Use Awake for component fetching
     {
         baseCollider = GetComponent<Collider>();
-        health = GetComponent<Health>(); // Get the Health component
+        if (health == null) // Check if health was already assigned in Inspector
+        {
+            health = GetComponent<Health>(); // Get the Health component if not
+        }
 
         // Auto-find player if not set through inspector
         if (ownerPlayer == null)
@@ -36,12 +41,12 @@ public class BaseController : NetworkBehaviour
 
             if (ownerPlayer == null)
             {
-                Debug.LogError($"Base {gameObject.name} has no owner player assigned!", this);
+                DebugLogError($"Base {gameObject.name} has no owner player assigned!");
                 return; // Cannot operate without an owner
             }
             else
             {
-                Debug.Log($"Base automatically assigned to player: {ownerPlayer.playerName}");
+                DebugLog($"Base automatically assigned to player: {ownerPlayer.playerName}");
             }
         }
 
@@ -52,64 +57,75 @@ public class BaseController : NetworkBehaviour
         }
         else
         {
-            Debug.LogError("BaseController requires a Health component!", this);
+            DebugLogError("BaseController requires a Health component!");
         }
-
     }
 
     void OnEnable()
     {
-        Debug.Log($"Base {gameObject.name} enabled.");
-
-        SpawnUnit();
+        DebugLog($"Base {gameObject.name} enabled.");
+        if (IsServer)
+        {
+            SpawnUnit();
+            // TODO: Start timer for next unit immediately after the first spawn on enable?
+        }
     }
 
     void Update()
     {
-        if (!IsOwner) return; // Only server/host controls spawning
-        if (ownerPlayer == null) return;
+        if (!IsServer) return;
+        if (ownerPlayer == null) return; // Need an owner to manage unit counts
 
-        // Check if we should start the spawn timer
-        // Assumes Player script has HasPendingUnits() method
+        DebugLogUpdate($"Update called, ownerPlayer: {ownerPlayer.playerName}, spawnTimer: {spawnTimer}, isSpawnTimerRunning: {isSpawnTimerRunning}, ownerPlayer.HasPendingUnits: {ownerPlayer.HasPendingUnits()}");
+
+        // Check if we should start the spawn timer (only if it's not already running)
         if (!isSpawnTimerRunning && !ownerPlayer.HasPendingUnits())
         {
-            spawnTimer = unitSpawnInterval;
-            isSpawnTimerRunning = true;
-            // Debug.Log($"Starting spawn timer ({unitSpawnInterval}s).");
+            StartSpawnTimer();
         }
 
+        // Process the spawn timer if it's running
         if (isSpawnTimerRunning)
         {
             spawnTimer -= Time.deltaTime;
-            // Debug.Log($"Spawn timer: {spawnTimer:F2}"); // Optional: Debug timer
+            // DebugLogUpdate($"Spawn timer: {spawnTimer:F2}");
 
             // When timer finishes, check if we can spawn and then spawn
             if (spawnTimer <= 0f)
             {
                 isSpawnTimerRunning = false; // Stop timer regardless of spawn success
-                // Debug.Log("Spawn timer finished.");
+                DebugLogUpdate("Spawn timer finished.");
 
-                if (CanProduceMoreUnits())
-                {
-                    SpawnUnit();
-                }
-                // else { Debug.Log("Cannot produce more units right now."); }
+                SpawnUnit();
             }
         }
     }
 
+    void StartSpawnTimer()
+    {
+        spawnTimer = unitSpawnInterval;
+        isSpawnTimerRunning = true;
+        DebugLogUpdate($"Starting spawn timer ({unitSpawnInterval}s).");
+    }
+
     bool CanProduceMoreUnits()
     {
-        if (ownerPlayer == null) return false; // Should not happen if Start() checks, but good practice
+        if (ownerPlayer == null)
+        {
+            DebugLogWarning("Cannot check unit production: ownerPlayer is null.");
+            return false;
+        }
 
-        // Clean up destroyed units from the local list
-        producedUnits.RemoveAll(unit => unit == null);
+        // Clean up destroyed units from the local list (server-side check primarily)
+        if (IsServer)
+        {
+            producedUnits.RemoveAll(unit => unit == null);
+        }
 
         // Check against max units using the Player's count
-        // Assumes Player script has GetUnitCount() method
         if (maxUnits > 0 && ownerPlayer.GetUnitCount() >= maxUnits)
         {
-            // Debug.Log($"Max units ({maxUnits}) reached for player {ownerPlayer.playerName}.");
+            DebugLog($"Max units ({maxUnits}) reached for player {ownerPlayer.playerName}.");
             return false;
         }
 
@@ -118,126 +134,139 @@ public class BaseController : NetworkBehaviour
 
     void SpawnUnit()
     {
-        if (!IsServer) return; // Spawning should only happen on the server
+        if (!IsServer)
+        {
+            DebugLogWarning("SpawnUnit called on non-server client. Ignoring.");
+            return; // Spawning should only happen on the server
+        }
 
-        // Log spawnTo.position
-        Debug.Log($"SpawnUnit: spawnTo.position: {spawnTo.position}");
+        // Use DebugLog for server-side logic flow
+        DebugLog($"Attempting to spawn unit. Spawn target position: {spawnTo?.position.ToString() ?? "Not Set"}");
 
         if (ownerPlayer == null)
         {
-            Debug.LogError("Cannot spawn unit without an ownerPlayer!", this);
+            DebugLogError("Cannot spawn unit without an ownerPlayer!");
             return;
         }
         if (unitPrefab == null)
         {
-            Debug.LogError("Unit Prefab is not assigned in the inspector!", this);
+            DebugLogError("Unit Prefab is not assigned in the inspector!");
             return;
         }
-        if (!CanProduceMoreUnits()) // Added check here before instantiation
+        if (spawnTo == null)
         {
-            // Debug.Log("SpawnUnit called, but cannot produce more units.");
+            DebugLogError("SpawnTo transform is not assigned in the inspector!");
             return;
         }
-
-        Vector3 spawnPosition = transform.position;
-        // Instantiate the unit locally on the server first
-        GameObject newUnitObject = Instantiate(unitPrefab, spawnPosition, transform.rotation);
-
-        Debug.Log($"SpawnUnit: newUnitObject: {newUnitObject}");
-
-        // Get the NetworkObject component from the instantiated object
-        NetworkObject unitNetworkObject = newUnitObject.GetComponent<NetworkObject>();
-        if (unitNetworkObject == null)
+        if (!CanProduceMoreUnits())
         {
-            Debug.LogError("Spawned Unit Prefab is missing a NetworkObject component!", newUnitObject);
-            Destroy(newUnitObject); // Clean up the failed instantiation
+            DebugLog("SpawnUnit called, but cannot produce more units at this moment.");
             return;
         }
 
-        // Spawn the object across the network. This must be done BEFORE setting parent or modifying NetworkBehaviours.
-        // Ownership is implicitly assigned to the server here. If clients needed ownership, use SpawnWithOwnership.
-        unitNetworkObject.Spawn(true); // Pass true to automatically destroy with the scene if the server stops
+        Vector3 spawnPosition = transform.position; // Spawn at base position
+        GameObject newUnitObject = null; // Declare outside try-catch
+        NetworkObject unitNetworkObject = null;
 
-        Debug.Log($"Spawned Unit {unitNetworkObject.NetworkObjectId}");
-
-        // --- Configuration AFTER Spawning ---
-
-        // Get the Unit component AFTER spawning
-        Unit unit = newUnitObject.GetComponent<Unit>();
-        if (unit == null)
+        try
         {
-            Debug.LogError("Spawned object is missing Unit component!", newUnitObject);
-            // Clean up the failed spawn - Despawn first!
-            if (unitNetworkObject.IsSpawned)
+            // Instantiate the unit locally on the server first
+            newUnitObject = Instantiate(unitPrefab, spawnPosition, transform.rotation);
+            DebugLog($"Instantiated unit prefab: {newUnitObject.name}");
+
+            // Get the NetworkObject component
+            unitNetworkObject = newUnitObject.GetComponent<NetworkObject>();
+            if (unitNetworkObject == null)
+            {
+                DebugLogError("Spawned Unit Prefab is missing a NetworkObject component!", newUnitObject);
+                Destroy(newUnitObject); // Clean up the failed instantiation
+                return;
+            }
+
+            // Spawn the object across the network. This must be done BEFORE setting parent or modifying NetworkBehaviours.
+            // Ownership is implicitly assigned to the server here. If clients needed ownership, use SpawnWithOwnership.
+            unitNetworkObject.Spawn(true); // Destroy with scene
+            DebugLog($"Spawned NetworkObject Unit ID: {unitNetworkObject.NetworkObjectId}");
+
+            // --- Configuration AFTER Spawning ---
+            Unit unit = newUnitObject.GetComponent<Unit>();
+            if (unit == null)
+            {
+                DebugLogError("Spawned object is missing Unit component!", newUnitObject);
+                // Clean up the failed spawn - Despawn first!
+                if (unitNetworkObject.IsSpawned) unitNetworkObject.Despawn(true);
+                else Destroy(newUnitObject); // If spawn hadn't happened yet
+                return;
+            }
+
+            // Initialize owner *immediately* after getting component and before parenting/adding
+            unit.InitializeOwnerPlayer(ownerPlayer);
+            DebugLog($"Initialized owner for unit {unitNetworkObject.NetworkObjectId} to {ownerPlayer.playerName}");
+
+            // Set the parent *after* spawning and initializing owner.
+            newUnitObject.transform.SetParent(ownerPlayer.transform, worldPositionStays: true);
+            DebugLog($"Parented unit {unitNetworkObject.NetworkObjectId} under {ownerPlayer.gameObject.name}");
+
+
+            // Add to local tracking list (server only)
+            producedUnits.Add(newUnitObject);
+            DebugLog($"Unit added to base's produced list. Count: {producedUnits.Count}");
+
+            // Register unit with the player (server-side)
+            ownerPlayer.AddUnit(unit);
+            DebugLog($"Registered unit {unitNetworkObject.NetworkObjectId} with Player {ownerPlayer.playerName}.");
+
+
+            // Assign initial state
+            unit.ChangeState(new GoToLocationState(unit, spawnTo.position));
+            DebugLog($"Set initial state GoToLocationState for unit {unitNetworkObject.NetworkObjectId} towards {spawnTo.position}");
+
+        }
+        catch (System.Exception e) // Catch potential errors during instantiation/setup
+        {
+            // Corrected multiline string formatting
+            DebugLogError($"Exception during SpawnUnit: {e.Message}\n{e.StackTrace}");
+            // Cleanup potentially partially spawned object
+            if (unitNetworkObject != null && unitNetworkObject.IsSpawned)
             {
                 unitNetworkObject.Despawn(true);
             }
-            else // If spawn failed before the network call
+            else if (newUnitObject != null)
             {
                 Destroy(newUnitObject);
             }
-            return; // Stop further processing for this unit
         }
-
-        // *** Call InitializeOwnerPlayer immediately after getting the component ***
-        // This sets the local owner and replicates the OwnerPlayerId NetworkVariable.
-        unit.InitializeOwnerPlayer(ownerPlayer);
-
-        // Set the parent *after* spawning and initializing owner.
-        // Consider if parenting is strictly necessary or if owner reference is enough.
-        // Parenting networked objects can sometimes have implications. Let's keep it for now.
-        newUnitObject.transform.SetParent(ownerPlayer.transform, worldPositionStays: true);
-
-        // Add to local tracking list (consider removing if Player manages list solely)
-        // This list should probably only exist on the server if it's needed at all.
-        producedUnits.Add(newUnitObject);
-        // Debug.Log($"Unit spawned at {spawnPosition}. Base produced units: {producedUnits.Count}");
-
-        // Register unit with the player (likely server-side logic)
-        if (ownerPlayer != null)
-        {
-            ownerPlayer.AddUnit(unit);
-        }
-
-        unit.ChangeState(new GoToLocationState(unit, spawnTo.position));
     }
 
     void OnDisable()
     {
-        // Optional: Add logic here if something needs to happen when the base is disabled
-        // For example, stopping timers or coroutines explicitly.
-        Debug.Log($"Base {gameObject.name} disabled.");
+        DebugLog($"Base {gameObject.name} disabled.");
         isSpawnTimerRunning = false; // Stop the timer if disabled mid-countdown
     }
 
     public override void OnDestroy()
     {
-        // Unsubscribe from the health depleted event to prevent memory leaks
+        DebugLog($"Base {gameObject.name} being destroyed.");
         if (health != null)
         {
             health.OnHealthDepleted -= HandleDeath;
         }
-        // TODO: is this needed?
-        base.OnDestroy(); // Call base implementation
+        base.OnDestroy();
     }
 
-    // Method to handle base destruction when health is depleted
     private void HandleDeath()
     {
-        Debug.Log($"Base {gameObject.name} belonging to {ownerPlayer?.playerName ?? "Unknown"} has been destroyed!");
+        DebugLog($"Base {gameObject.name} belonging to {ownerPlayer?.playerName ?? "Unknown"} has been destroyed!");
 
         // TODO: Add visual/audio effects for destruction
         // TODO: Notify GameManager about base destruction (e.g., check for win/loss conditions)
 
-        // Disable the base object or destroy it
-        // Destroy(gameObject);
-        // For now, just disable components to stop functionality like spawning
-        this.enabled = false; // Disable this script
-        if (baseCollider != null) baseCollider.enabled = false; // Disable collider
-        // Optionally disable renderer etc.
+        this.enabled = false;
+        if (baseCollider != null) baseCollider.enabled = false;
+
+        DebugLog($"Disabled BaseController script and Collider for destroyed base {gameObject.name}.");
     }
 
-    // Used for game state visualization
     void OnDrawGizmos()
     {
         if (ownerPlayer != null)
@@ -252,5 +281,37 @@ public class BaseController : NetworkBehaviour
                 Gizmos.DrawLine(transform.position, spawnTo.position);
             }
         }
+    }
+
+    private void DebugLog(string message)
+    {
+        if (enableDebugLogs)
+        {
+            Debug.Log($"[BaseController] {message}", this);
+        }
+    }
+
+    private void DebugLogUpdate(string message)
+    {
+        if (enableUpdateDebugLogs)
+        {
+            Debug.Log($"[BaseController Update] {message}", this);
+        }
+    }
+
+    private void DebugLogWarning(string message)
+    {
+        // Pass 'this' to allow clicking the log message to highlight the object
+        Debug.LogWarning($"[BaseController Warning] {message}", this);
+    }
+
+    private void DebugLogError(string message)
+    {
+        // Pass 'this' to allow clicking the log message to highlight the object
+        Debug.LogError($"[BaseController Error] {message}", this);
+    }
+    private void DebugLogError(string message, Object context)
+    {
+        Debug.LogError($"[BaseController Error] {message}", context);
     }
 }

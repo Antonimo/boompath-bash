@@ -26,10 +26,11 @@ public class AttackState : UnitState
     // Server-side constructor
     public AttackState(Unit unit, Component target, UnitState returnTo) : base(unit)
     {
+        Debug.Log($"AttackState constructor called with unit: {unit.name}, target: {target?.name}, returnTo: {returnTo?.GetType().Name}");
         // This constructor is primarily for the SERVER
         if (!unit.IsServer)
         {
-            Debug.LogError($"Server AttackState constructor called on client!", unit);
+            // Debug.LogError($"Server AttackState constructor called on client!", unit);
             // Fallback or error handling?
         }
 

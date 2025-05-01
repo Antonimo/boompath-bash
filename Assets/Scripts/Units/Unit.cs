@@ -2,14 +2,16 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 
-[RequireComponent(typeof(Health))] // Ensure Health component exists
-[RequireComponent(typeof(NetworkObject))] // Ensure NetworkObject exists
+[RequireComponent(typeof(Health))]
+[RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(Collider))]
-// TODO: Add RequireComponent for NetworkTransform once added in Editor
+[RequireComponent(typeof(NetworkTransform))]
 public class Unit : NetworkBehaviour
 {
-    // Define the possible states for the unit
+    // TODO: freeze unit movement when below -500 Y?
+    // TODO: disable/reduce network sync when unit is dead?
     public enum UnitStateEnum
     {
         Idle,
@@ -31,7 +33,9 @@ public class Unit : NetworkBehaviour
 
     // Tracks the current state across the network
     public NetworkVariable<UnitStateEnum> NetworkCurrentState = new NetworkVariable<UnitStateEnum>(UnitStateEnum.Idle, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-
+    // TODO: for syncinc state data:
+    // NetworkVariable<StateData>
+    // https://grok.com/share/bGVnYWN5_a5861f4a-b711-4dd8-b2b6-5110548899c6
 
     private UnitState currentState;
     // TODO: dynamically get current state and display in Inspector -> Now use NetworkCurrentState
@@ -489,9 +493,10 @@ public class Unit : NetworkBehaviour
         Vector3 currentPosition = transform.position;
         float distanceToTarget = Vector2.Distance(
             new Vector2(currentPosition.x, currentPosition.z),
-            new Vector2(targetPosition.x, targetPosition.z));
+            new Vector2(targetPosition.x, targetPosition.z)
+        );
 
-        DebugLog($"Unit {gameObject.name} position: {transform.position}, distance to target: {distanceToTarget}, target: {targetPosition}, stopping distance: {stoppingDistance}");
+        // DebugLog($"Unit {gameObject.name} position: {transform.position}, distance to target: {distanceToTarget}, target: {targetPosition}, stopping distance: {stoppingDistance}");
 
         return distanceToTarget < stoppingDistance;
     }

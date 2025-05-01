@@ -35,7 +35,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1.86, z: 0}
-  m_LocalScale: {x: 2, y: 1.5, z: 2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6637877763404016341}
@@ -196,8 +196,8 @@ MonoBehaviour:
   enableUpdateDebugLogs: 0
   enableFixedUpdateDebugLogs: 0
   hitChance: 0.7
-  minDamage: 71
-  maxDamage: 107
+  minDamage: 10
+  maxDamage: 34
   health: {fileID: 7237998731447122316}
 --- !u!114 &7237998731447122316
 MonoBehaviour:
@@ -211,8 +211,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed12cb5963457495287bc1fd612a2ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
-  currentHealth: 100
+  ShowTopMostFoldoutHeaderGroup: 1
+  startingMaxHealth: 100
+  maxHealth:
+    m_InternalValue: 100
+  startingHealth: 100
+  currentHealth:
+    m_InternalValue: 100
 --- !u!114 &4622952311569197962
 MonoBehaviour:
   m_ObjectHideFlags: 0

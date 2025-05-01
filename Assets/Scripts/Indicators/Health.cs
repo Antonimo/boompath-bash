@@ -1,72 +1,126 @@
 using UnityEngine;
 using System;
+using Unity.Netcode;
 
-public class Health : MonoBehaviour
+public class Health : NetworkBehaviour
 {
-    [SerializeField] private int maxHealth = 100;
-    public int MaxHealth => maxHealth;
-    [SerializeField] private int currentHealth = 100;
-    public int CurrentHealth => currentHealth;
+    // TODO: NetworkVariables in Inspector ReadOnly Serialized??
+    [SerializeField] private int startingMaxHealth = 100;
+    public NetworkVariable<int> maxHealth = new NetworkVariable<int>(
+        100,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+    public int MaxHealth => maxHealth.Value;
 
-    // Event to notify when health changes
+    [SerializeField] private int startingHealth = 100;
+    public NetworkVariable<int> currentHealth = new NetworkVariable<int>(
+        100,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+    public int CurrentHealth => currentHealth.Value;
+
+    public bool IsAlive => currentHealth.Value > 0;
+
+    /// <summary>
+    /// Event triggered when health changes. (updatedHealth, maxHealth)
+    /// </summary>
     public event Action<int, int> OnHealthChanged;
     public event Action OnHealthDepleted;
 
     private void OnValidate()
     {
-        if (maxHealth < 0) maxHealth = 0;
-        if (currentHealth < 0) currentHealth = 0;
-        // if (currentHealth > maxHealth) currentHealth = maxHealth;
-
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        if (startingMaxHealth < 0) startingMaxHealth = 0;
+        startingHealth = Mathf.Clamp(startingHealth, 0, startingMaxHealth);
     }
 
-    private void Start()
+    public override void OnNetworkSpawn()
     {
-        currentHealth = maxHealth;
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
-    }
-
-    public void SetHealth(int health)
-    {
-        currentHealth = health;
-        if (currentHealth > maxHealth) currentHealth = maxHealth;
-        if (currentHealth < 0) currentHealth = 0;
-
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
-    }
-
-    public void SetMaxHealth(int health)
-    {
-        maxHealth = health;
-        if (currentHealth > maxHealth) currentHealth = maxHealth;
-
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
-    }
-
-    public void TakeDamage(int damage)
-    {
-        currentHealth -= damage;
-        bool healthDepleted = false;
-        if (currentHealth <= 0)
+        if (IsServer)
         {
-            currentHealth = 0;
-            healthDepleted = true;
+            maxHealth.Value = startingMaxHealth;
+            currentHealth.Value = startingHealth;
         }
 
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        currentHealth.OnValueChanged += HandleHealthChanged;
+        maxHealth.OnValueChanged += HandleMaxHealthChanged;
 
-        if (healthDepleted)
+        HandleHealthChanged(currentHealth.Value, currentHealth.Value);
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        currentHealth.OnValueChanged -= HandleHealthChanged;
+        maxHealth.OnValueChanged -= HandleMaxHealthChanged;
+    }
+
+    // Handles changes from the currentHealth NetworkVariable
+    private void HandleHealthChanged(int previousValue, int newValue)
+    {
+        // Determine alive status before and after
+        bool wasAlive = previousValue > 0;
+        bool isNowAlive = newValue > 0;
+
+        // Invoke local event with the new value and the current synchronized maxHealth
+        OnHealthChanged?.Invoke(newValue, maxHealth.Value);
+
+        // Trigger OnHealthDepleted only when transitioning from alive to not alive
+        if (wasAlive && !isNowAlive)
         {
             OnHealthDepleted?.Invoke();
         }
+        // Optional: Add OnRevived logic here if needed in the future
+        // else if (!wasAlive && isNowAlive) { /* Invoke OnRevived */ }
     }
 
+    // Handles changes from the maxHealth NetworkVariable
+    private void HandleMaxHealthChanged(int previousValue, int newValue)
+    {
+        OnHealthChanged?.Invoke(currentHealth.Value, newValue);
+    }
+
+    // Server authoritative method to set health directly
+    public void SetHealth(int health)
+    {
+        if (!IsServer) return;
+        currentHealth.Value = Mathf.Clamp(health, 0, maxHealth.Value);
+    }
+
+    // Server authoritative method to change max health
+    public void SetMaxHealth(int newMaxHealth)
+    {
+        if (!IsServer) return;
+
+        int clampedNewMax = Mathf.Max(0, newMaxHealth);
+        if (maxHealth.Value == clampedNewMax) return;
+
+        maxHealth.Value = clampedNewMax;
+
+        int clampedCurrentHealth = Mathf.Clamp(currentHealth.Value, 0, maxHealth.Value);
+        if (currentHealth.Value != clampedCurrentHealth)
+        {
+            currentHealth.Value = clampedCurrentHealth;
+        }
+    }
+
+    // Server authoritative method to apply damage
+    public void TakeDamage(int damage)
+    {
+        // Only server applies damage, and only if the object is currently alive
+        if (!IsServer || !IsAlive) return;
+        if (damage <= 0) return;
+
+        currentHealth.Value = Mathf.Max(0, currentHealth.Value - damage);
+    }
+
+    // Server authoritative method to apply healing
     public void Heal(int amount)
     {
-        currentHealth += amount;
-        if (currentHealth > maxHealth) currentHealth = maxHealth;
+        // Only server applies healing, and only if the object is currently alive
+        // Note: You might allow healing a dead object if reviving is intended,
+        // but typically healing implies the target is already alive.
+        if (!IsServer || !IsAlive) return;
+        if (amount <= 0) return;
 
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth.Value);
     }
 }

@@ -40,7 +40,7 @@ public class GoToLocationState : UnitState
         // Authoritative movement and arrival check only happen on the server
         if (unit.IsServer)
         {
-            Debug.Log($"[Unit FixedUpdate] Unit {unit.NetworkObjectId} in GoToLocationState _targetPosition: {_targetPosition}");
+            // Debug.Log($"[Unit FixedUpdate] Unit {unit.NetworkObjectId} in GoToLocationState _targetPosition: {_targetPosition}");
 
             if (!_hasReachedTarget)
             {
