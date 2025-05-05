@@ -1,14 +1,93 @@
 # Hierarchy References
 Below is the list of top-level GameObjects in the current scene:
 
-- **PlayersLocations**
-  - Player1
-  - Player2
 - **GameManagement**
   - GameManager
   - CameraManager
   - BotsManager
+- **UI**
+  - PathManager
+    - HealthBarCanvas
+      - Background
+        - Fill
+    - PathEditor
+  - PlayerTurn
+  - FloatingTextManager
+- **EventSystem**
+- **Directional Light**
+- **MainMenu**
+  - PrivateMatchManager
+  - MainMenuCanvas
+    - MainMenuPanel
+      - MainMenuTitleText
+      - Buttons
+        - PlayOnlineButton
+          - Text (TMP)
+        - PrivateMatchButton
+          - Text (TMP)
+        - PlayOfflineButton
+          - Text (TMP)
+        - QuitButton
+          - Text (TMP)
+    - PrivateMatchPanel
+      - TitleText
+      - Buttons
+        - JoinButton
+          - Text (TMP)
+        - CreateMatchButton
+          - Text (TMP)
+        - BackButton
+          - Text (TMP)
+    - GameModePanel
+      - TitleText
+      - Buttons
+        - HackPathButton
+          - Text (TMP)
+        - BoomPathButton
+          - Text (TMP)
+        - PewPewPathButton
+          - Text (TMP)
+        - BackButton
+          - Text (TMP)
+    - TeamSizePanel
+      - TitleText
+      - Buttons
+        - OneOnOneButton
+          - Text (TMP)
+        - TwoOnTwoButton
+          - Text (TMP)
+        - ThreeOnThreeButton
+          - Text (TMP)
+        - BackButton
+          - Text (TMP)
+    - PrivateMatchLobby
+      - TitleText
+      - Buttons
+        - JoinButton
+          - Text (TMP)
+        - CreateMatchButton
+          - Text (TMP)
+        - BackButton
+          - Text (TMP)
+- **Players**
+  - Player
+    - BotLogic
+    - Base
+      - SpawnTo
+      - HealthBarCanvas
+        - Background
+          - Fill
+      - CameraPosition
+  - Player (1)
+    - BotLogic
+    - Base
+      - SpawnTo
+      - HealthBarCanvas
+        - Background
+          - Fill
+      - CameraPosition
 - **NetworkManager**
+- **Global Volume**
 - **Cameras**
   - Free Camera
   - Path Draw Camera
@@ -18,20 +97,55 @@ Below is the list of top-level GameObjects in the current scene:
       - Text (TMP)
     - ClientBtn
       - Text (TMP)
+  - Session Player List
+    - Header
+      - Headline Text
+    - Player List ScrollView
+      - Viewport
+        - Content
+          - Session Player List Item
+            - Panel
+            - Row
+              - Name Container
+                - Player Name
+                - Voice Indicator
+              - Button Container
+                - Mute Button
+                  - Text (TMP)
+                - Kick Button
+                  - Text (TMP)
+      - Scrollbar Horizontal
+        - Sliding Area
+          - Handle
+      - Scrollbar Vertical
+        - Sliding Area
+          - Handle
+  - Create Session
+    - InputField (TMP)
+      - Text Area
+        - Placeholder
+        - Text
+    - Button
+      - Text (TMP)
+  - Join Session By Code
+    - InputField (TMP)
+      - Text Area
+        - Placeholder
+        - Text
+    - Button
+      - Text (TMP)
+  - Leave Session
+    - Text (TMP)
+  - Show Session Code
+    - Image
+    - Session Code Text
+    - Copy Button
+      - Image
+- **PlayersLocations**
+  - Player1
+  - Player2
 - **Ground**
-- **Players**
-- **Directional Light**
 - **Network**
   - Runtime Network Stats Monitor
   - PlayerSpawnManager
   - NetworkGameManager
-- **UI**
-  - PathManager
-    - HealthBarCanvas
-      - Background
-        - Fill
-    - PathEditor
-  - PlayerTurn
-  - FloatingTextManager
-- **Global Volume**
-- **EventSystem**

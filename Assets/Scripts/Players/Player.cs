@@ -22,8 +22,7 @@ public class Player : NetworkBehaviour
     [SerializeField] private List<Unit> ownedUnits = new List<Unit>();
     public List<Unit> OwnedUnits => ownedUnits;
 
-    // Reference to player's base
-    // public Transform playerBase;
+    [SerializeField] private bool enableDebugLogs = false;
 
     // Called by the server (PlayerAssignmentManager) after spawn to initialize state
     public void Setup(Color initialColor, int initialTeamId)
@@ -33,7 +32,7 @@ public class Player : NetworkBehaviour
         PlayerColor.Value = initialColor;
         TeamId.Value = initialTeamId;
 
-        Debug.Log($"Player {OwnerClientId} Setup complete. Color: {PlayerColor.Value}, TeamId: {TeamId.Value}");
+        DebugLog($"Player {OwnerClientId} Setup complete. Color: {PlayerColor.Value}, TeamId: {TeamId.Value}");
 
         // You could potentially also trigger initial visual updates here if needed immediately on the server
     }
@@ -42,13 +41,13 @@ public class Player : NetworkBehaviour
     /* Example handlers for NetworkVariable changes (optional)
     private void OnColorChanged(Color previousValue, Color newValue)
     {
-        Debug.Log($"Player {OwnerClientId} color changed to {newValue}");
+        DebugLog($"Player {OwnerClientId} color changed to {newValue}");
         // Update player visuals, materials, etc.
     }
 
     private void OnTeamIdChanged(int previousValue, int newValue)
     {
-        Debug.Log($"Player {OwnerClientId} team ID changed to {newValue}");
+        DebugLog($"Player {OwnerClientId} team ID changed to {newValue}");
         // Update team-related logic or visuals
     }
     */
@@ -121,23 +120,23 @@ public class Player : NetworkBehaviour
         // This method executes on the *local* client instance of the Player.
         if (!IsOwner)
         {
-            Debug.LogError($"RequestUnitPathAssignment called on Player object that is not the owner! OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}");
+            DebugLogError($"RequestUnitPathAssignment called on Player object that is not the owner! OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}");
             return;
         }
 
         if (unitNetworkId == 0)
         {
-            Debug.LogWarning($"[Player {OwnerClientId} Client] RequestUnitPathAssignment called with invalid unitNetworkId (0).");
+            DebugLogWarning($"[Client] RequestUnitPathAssignment called with invalid unitNetworkId (0).");
             return;
         }
 
         if (pathPoints == null || pathPoints.Count < 2) // Need at least start and one point
         {
-            Debug.LogWarning($"[Player {OwnerClientId} Client] RequestUnitPathAssignment called for Unit {unitNetworkId} with invalid path (null or < 2 points).");
+            DebugLogWarning($"[Client] RequestUnitPathAssignment called for Unit {unitNetworkId} with invalid path (null or < 2 points).");
             return;
         }
 
-        Debug.Log($"[Player {OwnerClientId} Client] Calling AssignPathToServerRpc for Unit {unitNetworkId} with {pathPoints.Count} points.");
+        DebugLog($"[Client] Calling AssignPathToServerRpc for Unit {unitNetworkId} with {pathPoints.Count} points.");
         // Call the ServerRpc, passing the ID of the unit and the path points.
         AssignPathToServerRpc(unitNetworkId, pathPoints.ToArray());
     }
@@ -146,7 +145,7 @@ public class Player : NetworkBehaviour
     private void AssignPathToServerRpc(ulong unitNetworkId, Vector3[] pathArray)
     {
         // This code executes ONLY on the server instance of this Player object.
-        Debug.Log($"[Player {OwnerClientId} Server] Received AssignPathToServerRpc for Unit {unitNetworkId}.");
+        DebugLog($"[Server] Received AssignPathToServerRpc for Unit {unitNetworkId}.");
 
         // Find the target Unit's NetworkObject on the server
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(unitNetworkId, out NetworkObject unitNetworkObject))
@@ -158,25 +157,48 @@ public class Player : NetworkBehaviour
                 // Verify that the Player sending this RPC actually owns the target unit.
                 if (targetUnit.OwnerPlayerId.Value == this.NetworkObjectId)
                 {
-                    Debug.Log($"[Player {OwnerClientId} Server] Ownership confirmed. Calling FollowPath on Unit {unitNetworkId}.");
+                    DebugLog($"[Server] Ownership confirmed. Calling FollowPath on Unit {unitNetworkId}.");
                     // Call the Unit's method to process the path (this will run server-side)
                     targetUnit.FollowPath(new List<Vector3>(pathArray));
                 }
                 else
                 {
-                    Debug.LogError($"[Player {OwnerClientId} Server] Security violation: Tried to submit path for Unit {unitNetworkId}, but unit owner is {targetUnit.OwnerPlayerId.Value}, not {this.NetworkObjectId}. Ignoring.");
+                    DebugLogError($"[Server] Security violation: Tried to submit path for Unit {unitNetworkId}, but unit owner is {targetUnit.OwnerPlayerId.Value}, not {this.NetworkObjectId}. Ignoring.");
                 }
             }
             else
             {
-                Debug.LogError($"[Player {OwnerClientId} Server] Found NetworkObject for Unit {unitNetworkId}, but it has no Unit component. Ignoring path.");
+                DebugLogError($"[Server] Found NetworkObject for Unit {unitNetworkId}, but it has no Unit component. Ignoring path.");
             }
         }
         else
         {
-            Debug.LogWarning($"[Player {OwnerClientId} Server] Could not find spawned NetworkObject for Unit {unitNetworkId}. Unit might have been destroyed before path arrived. Ignoring path.");
+            DebugLogWarning($"[Server] Could not find spawned NetworkObject for Unit {unitNetworkId}. Unit might have been destroyed before path arrived. Ignoring path.");
         }
     }
     // --- End Path Assignment RPC Flow ---
 
+    // --- Logging Helper Methods ---
+
+    private void DebugLog(string message)
+    {
+        if (enableDebugLogs)
+        {
+            Debug.Log($"[Player {OwnerClientId}] {message}");
+        }
+    }
+
+    // Add DebugLogUpdate/DebugLogFixedUpdate helpers here if needed in the future
+
+    private void DebugLogWarning(string message)
+    {
+        // Pass 'this' to allow clicking the log message to highlight the object
+        Debug.LogWarning($"[Player {OwnerClientId} Warning] {message}", this);
+    }
+
+    private void DebugLogError(string message)
+    {
+        // Pass 'this' to allow clicking the log message to highlight the object
+        Debug.LogError($"[Player {OwnerClientId} Error] {message}", this);
+    }
 }

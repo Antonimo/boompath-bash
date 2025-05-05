@@ -11,14 +11,16 @@ A 3D mobile game developed in Unity 6 where units follow player-drawn paths to a
 - C# targeting iOS/Android/Desktop
 
 ## Developer Background
-- I am an experienced programmer new to C# and Unity.
-- I understand general programming concepts but need guidance on Unity-specific patterns, C# syntax, and best practices for mobile game development with Unity.
+- Assume user is new to Unity and C# but has a strong programming background.
+- Provide clear, beginner-friendly explanations for Unity-specific concepts.
+- Assume user understands general programming concepts but need guidance on Unity-specific patterns, C# syntax, and best practices for mobile game development with Unity.
 
 ## Coding Guidelines
 - Use C# with Unity 6 best practices, game development best practices for small projects
 - Minimize garbage collection (avoid frequent `new` allocations)
 - Name variables and methods descriptively
 - Follow C# naming conventions: `PascalCase` for public members, `camelCase` for private fields
+- Avoid adding comments that merely restate what the code clearly shows. Focus comments on explaining the 'why' behind non-obvious logic, not the 'what'.
 
 ### Architecture Guidelines
 - Prefer component-based design (MonoBehaviours / NetworkBehaviours)
