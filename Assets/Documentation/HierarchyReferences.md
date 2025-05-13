@@ -1,22 +1,37 @@
 # Hierarchy References
 Below is the list of top-level GameObjects in the current scene:
 
+- **Directional Light**
+- **Ground**
+- **PrivateMatchManager**
 - **GameManagement**
   - GameManager
   - CameraManager
   - BotsManager
-- **UI**
-  - PathManager
-    - HealthBarCanvas
-      - Background
-        - Fill
-    - PathEditor
-  - PlayerTurn
-  - FloatingTextManager
+- **Global Volume**
 - **EventSystem**
-- **Directional Light**
+- **NetworkManager**
+- **Cameras**
+  - Free Camera
+  - Path Draw Camera
+- **Players**
+  - Player
+    - BotLogic
+    - Base
+      - SpawnTo
+      - HealthBarCanvas
+        - Background
+          - Fill
+      - CameraPosition
+  - Player (1)
+    - BotLogic
+    - Base
+      - SpawnTo
+      - HealthBarCanvas
+        - Background
+          - Fill
+      - CameraPosition
 - **MainMenu**
-  - PrivateMatchManager
   - MainMenuCanvas
     - MainMenuPanel
       - MainMenuTitleText
@@ -60,91 +75,54 @@ Below is the list of top-level GameObjects in the current scene:
           - Text (TMP)
         - BackButton
           - Text (TMP)
-    - PrivateMatchLobby
+    - PrivateMatchCreatePanel
+      - TitleText
+      - Buttons
+        - Status Text
+        - BackButton
+          - Text (TMP)
+    - PrivateMatchLobbyShared
+      - TitleText
+      - MainSection
+        - BackButton
+          - Text (TMP)
+        - GameCodeTitle
+        - GameCode
+        - CopiedMessage
+        - Status
+      - PlayersList
+        - MenuButton
+          - Text (TMP)
+        - PlayerSlot 1
+          - PlayerNameText
+          - PlayerStatusText
+        - PlayerSlot 2
+          - PlayerNameText
+          - PlayerStatusText
+        - Status text
+    - PrivateMatchJoinPanel
       - TitleText
       - Buttons
         - JoinButton
           - Text (TMP)
-        - CreateMatchButton
-          - Text (TMP)
         - BackButton
           - Text (TMP)
-- **Players**
-  - Player
-    - BotLogic
-    - Base
-      - SpawnTo
-      - HealthBarCanvas
-        - Background
-          - Fill
-      - CameraPosition
-  - Player (1)
-    - BotLogic
-    - Base
-      - SpawnTo
-      - HealthBarCanvas
-        - Background
-          - Fill
-      - CameraPosition
-- **NetworkManager**
-- **Global Volume**
-- **Cameras**
-  - Free Camera
-  - Path Draw Camera
-- **MenuCanvas**
-  - OnlineMultiplayerUI
-    - HostBtn
-      - Text (TMP)
-    - ClientBtn
-      - Text (TMP)
-  - Session Player List
-    - Header
-      - Headline Text
-    - Player List ScrollView
-      - Viewport
-        - Content
-          - Session Player List Item
-            - Panel
-            - Row
-              - Name Container
-                - Player Name
-                - Voice Indicator
-              - Button Container
-                - Mute Button
-                  - Text (TMP)
-                - Kick Button
-                  - Text (TMP)
-      - Scrollbar Horizontal
-        - Sliding Area
-          - Handle
-      - Scrollbar Vertical
-        - Sliding Area
-          - Handle
-  - Create Session
-    - InputField (TMP)
-      - Text Area
-        - Placeholder
-        - Text
-    - Button
-      - Text (TMP)
-  - Join Session By Code
-    - InputField (TMP)
-      - Text Area
-        - Placeholder
-        - Text
-    - Button
-      - Text (TMP)
-  - Leave Session
-    - Text (TMP)
-  - Show Session Code
-    - Image
-    - Session Code Text
-    - Copy Button
-      - Image
+        - JoinCodeInput
+          - Text Area
+            - Placeholder
+            - Text
+        - StatusText
 - **PlayersLocations**
   - Player1
   - Player2
-- **Ground**
+- **UI**
+  - PathManager
+    - HealthBarCanvas
+      - Background
+        - Fill
+    - PathEditor
+  - PlayerTurn
+  - FloatingTextManager
 - **Network**
   - Runtime Network Stats Monitor
   - PlayerSpawnManager

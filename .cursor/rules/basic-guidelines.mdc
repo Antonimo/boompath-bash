@@ -34,3 +34,15 @@ A 3D mobile game developed in Unity 6 where units follow player-drawn paths to a
 ## Unity API Guidelines
 - Use `Object.FindFirstObjectByType<T>()` instead of deprecated `Object.FindObjectOfType<T>()` for finding scene objects
 
+## Installed UGS/Netcode Package Versions (from manifest.json)
+- `com.unity.services.multiplayer`: `1.1.3` (Unified UGS: Auth, Lobby, Relay)
+- `com.unity.netcode.gameobjects`: `2.3.2`
+- `com.unity.multiplayer.tools`: `2.2.3`
+- `com.unity.inputsystem`: `1.14.0`
+- `com.unity.transport`: `2.5.1` Implicitly managed by `com.unity.netcode.gameobjects`. Provides `UnityTransport` and `RelayServerData`.
+
+### UGS/Netcode Unified Services Guidelines
+- **Prioritize Unified Package**: Give precedence to APIs and functionalities from `com.unity.services.multiplayer` for features like authentication, lobby, and relay.
+- **Contextualize Older Examples**: Critically assess older code examples or documentation referring to separate UGS packages (e.g., standalone Auth, Lobby, Relay). Determine if functionality is now accessed via the unified `com.unity.services.multiplayer` package.
+- **Verify API Compatibility**: Ensure code suggestions align with the capabilities, namespaces, and unified approach of the installed `com.unity.services.multiplayer@1.1.3` package.
+- **Complement Specific Notes**: View these general guidelines as complementary to the "API Usage Notes Based on Versions" (e.g., `AllocationUtils.ToRelayServerData()`).
