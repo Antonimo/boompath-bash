@@ -160,7 +160,7 @@ MonoBehaviour:
   unitSpawnInterval: 5
   maxUnits: 50
   enableDebugLogs: 1
-  enableUpdateDebugLogs: 1
+  enableUpdateDebugLogs: 0
 --- !u!114 &2101242999614150568
 MonoBehaviour:
   m_ObjectHideFlags: 0

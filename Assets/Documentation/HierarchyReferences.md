@@ -1,36 +1,6 @@
 # Hierarchy References
 Below is the list of top-level GameObjects in the current scene:
 
-- **Directional Light**
-- **Ground**
-- **PrivateMatchManager**
-- **GameManagement**
-  - GameManager
-  - CameraManager
-  - BotsManager
-- **Global Volume**
-- **EventSystem**
-- **NetworkManager**
-- **Cameras**
-  - Free Camera
-  - Path Draw Camera
-- **Players**
-  - Player
-    - BotLogic
-    - Base
-      - SpawnTo
-      - HealthBarCanvas
-        - Background
-          - Fill
-      - CameraPosition
-  - Player (1)
-    - BotLogic
-    - Base
-      - SpawnTo
-      - HealthBarCanvas
-        - Background
-          - Fill
-      - CameraPosition
 - **MainMenu**
   - MainMenuCanvas
     - MainMenuPanel
@@ -90,16 +60,16 @@ Below is the list of top-level GameObjects in the current scene:
         - GameCode
         - CopiedMessage
         - Status
-      - PlayersList
-        - MenuButton
-          - Text (TMP)
-        - PlayerSlot 1
-          - PlayerNameText
-          - PlayerStatusText
-        - PlayerSlot 2
-          - PlayerNameText
-          - PlayerStatusText
-        - Status text
+        - PlayersList
+          - MenuButton
+            - Text (TMP)
+          - PlayerSlot 1
+            - PlayerNameText
+            - PlayerStatusText
+          - PlayerSlot 2
+            - PlayerNameText
+            - PlayerStatusText
+          - Status text
     - PrivateMatchJoinPanel
       - TitleText
       - Buttons
@@ -112,9 +82,7 @@ Below is the list of top-level GameObjects in the current scene:
             - Placeholder
             - Text
         - StatusText
-- **PlayersLocations**
-  - Player1
-  - Player2
+- **Directional Light**
 - **UI**
   - PathManager
     - HealthBarCanvas
@@ -123,7 +91,21 @@ Below is the list of top-level GameObjects in the current scene:
     - PathEditor
   - PlayerTurn
   - FloatingTextManager
-- **Network**
-  - Runtime Network Stats Monitor
-  - PlayerSpawnManager
-  - NetworkGameManager
+- **GameManagement**
+  - GameManager
+  - CameraManager
+  - BotsManager
+- **Cameras**
+  - Free Camera
+  - Path Draw Camera
+- **NetworkGameManager**
+- **PlayerSpawnManager**
+- **NetworkManager**
+- **Ground**
+- **Global Volume**
+- **PlayersLocations**
+  - Player1
+  - Player2
+- **Players**
+- **PrivateMatchManager**
+- **EventSystem**

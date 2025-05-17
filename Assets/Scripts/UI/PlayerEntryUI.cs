@@ -5,38 +5,22 @@ using UnityEngine.UI;
 public class PlayerEntryUI : MonoBehaviour
 {
     public TextMeshProUGUI playerNameText;
-    public TextMeshProUGUI playerStatusText; // e.g. "Ready", "Not Ready", "Host"
-    public Image highlightImage; // Optional: To highlight local player or host
+    public TextMeshProUGUI playerStatusText; // e.g. "Ready", "Not Ready"
 
-    public void Setup(string playerName, string status, bool isVacant, bool isHighlighted)
+    public void Setup(string playerName, string status)
     {
         gameObject.SetActive(true);
-        if (isVacant)
-        {
-            playerNameText.text = "Waiting for Player...";
-            playerStatusText.text = string.Empty;
-        }
-        else
-        {
-            playerNameText.text = playerName;
-            playerStatusText.text = status;
-        }
 
-        if (highlightImage != null)
-        {
-            highlightImage.enabled = isHighlighted && !isVacant;
-        }
+        playerNameText.text = playerName;
+        playerStatusText.text = status;
     }
 
     public void SetVacant()
     {
         gameObject.SetActive(true);
+
         playerNameText.text = "Waiting for Player...";
         playerStatusText.text = string.Empty;
-        if (highlightImage != null)
-        {
-            highlightImage.enabled = false;
-        }
     }
 
     public void Hide()

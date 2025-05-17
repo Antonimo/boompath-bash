@@ -23,8 +23,9 @@ public class NetworkGameManager : NetworkBehaviour
     {
         if (IsServer)
         {
+            Debug.Log("NetworkGameManager: Server spawned.");
             // Server waits for all players to be ready before starting the game
-            StartCoroutine(WaitForPlayersAndStartGame());
+            // StartCoroutine(WaitForPlayersAndStartGame());
         }
     }
 

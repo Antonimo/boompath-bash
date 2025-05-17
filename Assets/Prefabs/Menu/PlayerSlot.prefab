@@ -34,8 +34,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 300.405, y: 0.000030517578}
-  m_SizeDelta: {x: -633.787, y: -45.352}
+  m_AnchoredPosition: {x: 268.5509, y: 0.000091552734}
+  m_SizeDelta: {x: -537.112, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7962475238272305615
 CanvasRenderer:
@@ -92,15 +92,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 56.34
-  m_fontSizeBase: 56.34
+  m_fontSize: 47.16
+  m_fontSizeBase: 47.16
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -169,10 +169,10 @@ RectTransform:
   - {fileID: 7851595748934414218}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 250.901}
-  m_SizeDelta: {x: -37.33899, y: -542.558}
+  m_SizeDelta: {x: 290.661, y: 41.442017}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &8989344317201889451
 MonoBehaviour:
@@ -223,8 +223,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -298.48798, y: 1.2879944}
-  m_SizeDelta: {x: -656.976, y: -45.352}
+  m_AnchoredPosition: {x: -260.49, y: -0.000030517578}
+  m_SizeDelta: {x: -521, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6994539049023011213
 CanvasRenderer:
@@ -281,15 +281,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 56.34
-  m_fontSizeBase: 56.34
+  m_fontSize: 47.16
+  m_fontSizeBase: 47.16
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 4
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0

@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Guiding Principles for Direct Logic Execution
+
+This rule outlines principles to promote simpler, more direct code structures, particularly when dealing with asynchronous operations, helper functions, and state management like cooldowns. The goal is to avoid unnecessary indirection and overly complex solutions where straightforward approaches suffice.
+
+### 1. Prioritize Direct Action for Direct Intent
+- If an action (e.g., setting a cooldown, initializing a state variable) is a direct and immediate consequence of initiating a specific operation, place the code for that action at the very beginning of the operation's main method/function.
+- **Example**: A cooldown that must be active once an API call like `ExecuteOperationAsync` starts should be set as the first step within `ExecuteOperationAsync`.
+- Avoid routing such an action through intermediate wrappers or coroutines if it's meant to be an inseparable part of the main operation's initiation.
+
+### 2. Question Unnecessary Indirection and Wrappers
+- Critically evaluate if helper functions, coroutine wrappers, or intermediate steps are genuinely simplifying logic, managing a distinct and necessary responsibility (like complex stateful queuing), or if they are merely adding indirection to what could be a straightforward sequence.
+- If a wrapper's primary role becomes minimal (e.g., a coroutine that only `yield return new WaitForSeconds(0)` before calling an `async` method), strongly consider if the `async` method could be invoked and `await`ed directly, or if the wrapper is genuinely essential for other reasons (e.g., specific Unity lifecycle integration needs where `async void` is problematic and a true coroutine is required).
+
+### 3. Trust User's Design Intent for Core Logic Placement
+- When the user expresses a clear intent for where a piece of core logic should reside (e.g., "cooldown should be set *in* `MethodA`"), prioritize fulfilling that intent directly.
+- Only deviate if the user's preferred placement introduces a clear technical violation (e.g., compiler error, race condition) or a significant, demonstrable negative side effect that the user might not have considered.
+- Avoid arguing for alternative placements based on overly cautious or highly improbable hypothetical edge cases if the user's preferred placement is sound for the primary execution path and common error conditions.
+
+### 4. Strive for High Cohesion and Low Coupling
+- Place logic within the component or method that has the highest cohesion with it. For instance, if a cooldown is fundamentally tied to the execution of `ExecuteSomeApiCallAsync`, its management is highly cohesive with that method.
+- Minimize coupling: avoid situations where one method (e.g., a calling wrapper) needs to intricately know about and manage internal prerequisites (like setting a cooldown) for another method it calls, especially if that prerequisite can be self-contained within the called method.
+
+### 5. Simplicity in Control Flow
+- When designing control flow, especially for operations involving `async` calls or coroutines, aim for the most linear and understandable path.
+- If a request or operation can be handled immediately and directly, prefer that path. Avoid detours through queuing or delayed execution mechanisms unless those mechanisms are *currently and explicitly required* by the immediate context (e.g., an actual cooldown period is verifiably active, or a resource is genuinely busy).
+
+### 6. Exception Handling: Pragmatism over Ceremony
+- Use `try...catch` blocks primarily for specific, anticipated exceptions that the application can meaningfully handle or recover from.
+- Use `try...finally` for *guaranteed cleanup of critical resources* (e.g., `IDisposable` objects, network sockets, file handles) or *essential state resets* that *must* occur even if an exception is thrown or control flow diverts.
+- Avoid wrapping inherently safe operations (like reading properties or simple, robust logging calls) in `try...catch` or `try...finally` blocks unless there's a probable and handleable exception scenario associated with *that specific code* or a critical cleanup need that `finally` addresses. Simple sequential execution is often sufficient after safe operations.
+

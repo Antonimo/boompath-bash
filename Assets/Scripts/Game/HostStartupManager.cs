@@ -20,8 +20,7 @@ public class HostStartupManager : MonoBehaviour
         playerSpawnManager.enabled = false;
     }
 
-    // Call this method from your UI button instead of NetworkManager.Singleton.StartHost()
-    public void StartHostWithApprovalSetup()
+    public void StartHost()
     {
         if (playerSpawnManager == null)
         {

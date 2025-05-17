@@ -24,7 +24,7 @@ public class OnlineMultiplayerUI : MonoBehaviour
     {
         if (hostStartupManager != null)
         {
-            hostStartupManager.StartHostWithApprovalSetup();
+            hostStartupManager.StartHost();
         }
         else
         {
