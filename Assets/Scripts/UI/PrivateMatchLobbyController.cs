@@ -11,6 +11,8 @@ public class PrivateMatchLobbyController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI statusText;
     [SerializeField] private TextMeshProUGUI copiedMessageText;
     [SerializeField] private float copiedMessageDuration = 1.5f;
+    [SerializeField] private TextMeshProUGUI countdownText;
+    [SerializeField] private GameObject countdownPanel;
 
     [Header("Menu References")]
     [SerializeField] private MenuManager menuManager;
@@ -54,6 +56,13 @@ public class PrivateMatchLobbyController : MonoBehaviour
         // TODO: does it matter if this is done here or in Awake?
         copiedMessageText.gameObject.SetActive(false); // Hide "Copied!" message initially
 
+        // Subscribe to countdown events
+        PrivateMatchManager.OnCountdownTick += HandleCountdownTick;
+        PrivateMatchManager.OnCountdownComplete += HandleCountdownComplete;
+
+        // Hide countdown UI initially
+        countdownPanel.SetActive(false);
+
         GetLobbyCode();
 
         statusText.text = "Share join code";
@@ -71,8 +80,27 @@ public class PrivateMatchLobbyController : MonoBehaviour
     {
         if (privateMatchManager == null) return; // Guard against potential null ref if disabled early
 
+        // Unsubscribe from countdown events
+        PrivateMatchManager.OnCountdownTick -= HandleCountdownTick;
+        PrivateMatchManager.OnCountdownComplete -= HandleCountdownComplete;
+
         Debug.Log("PrivateMatchLobbyController: OnDisable");
         StopAllCoroutines(); // Stop any running coroutines, like ShowCopiedMessage
+    }
+
+    private void HandleCountdownTick(float remainingTime)
+    {
+        // Make countdown visible
+        if (!countdownPanel.activeSelf)
+            countdownPanel.SetActive(true);
+
+        int seconds = Mathf.CeilToInt(remainingTime);
+        countdownText.text = $"Game starting in {seconds}...";
+    }
+
+    private void HandleCountdownComplete()
+    {
+        countdownText.text = "Starting game...";
     }
 
     private void GetLobbyCode()
@@ -114,5 +142,4 @@ public class PrivateMatchLobbyController : MonoBehaviour
         yield return new WaitForSeconds(duration);
         copiedMessageText.gameObject.SetActive(false);
     }
-
 }

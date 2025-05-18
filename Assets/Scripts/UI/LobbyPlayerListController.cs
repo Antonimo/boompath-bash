@@ -147,6 +147,8 @@ public class LobbyPlayerListController : MonoBehaviour
     {
         Debug.Log($"LobbyPlayerListController: Ready button clicked. Current local ready: {localPlayerIsReady}. Toggling now.");
         _ = privateMatchManager.ToggleLocalPlayerReadyState();
+
+        readyToggleButton.gameObject.SetActive(false);
     }
 
 }

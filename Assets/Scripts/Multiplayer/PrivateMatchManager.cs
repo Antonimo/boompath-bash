@@ -23,7 +23,20 @@ public class PrivateMatchManager : MonoBehaviour
     // TODO: why static?
     // TODO: should I use singleton instead?
     public static event Action<List<LobbyPlayerData>, string, bool> OnLobbyStateBroadcast; // PlayerList, LocalPlayerId, IsLocalPlayerHost
+    // Countdown event for UI to display
+    public static event Action<float> OnCountdownTick; // Countdown remaining seconds
+    public static event Action OnCountdownComplete; // When countdown reaches zero
     // TODO: broeadcast state updates such as lobby deleted / disconnected / etc
+
+    [Header("Game Start Settings")]
+    [SerializeField] private float gameStartCountdownDuration = 5f; // Countdown in seconds before game starts
+    private bool countdownActive = false;
+    private float countdownTimeRemaining = 0f;
+    private const string LobbyDataKeyCountdownStarted = "CountdownStarted";
+
+    // Heartbeat settings
+    private Coroutine _heartbeatCoroutine;
+    private const float HEARTBEAT_INTERVAL = 15f; // Send heartbeat every 15 seconds (well within the 30s requirement)
 
     public string LobbyCode => _currentLobby?.LobbyCode;
     // TODO: should be derived from NetworkManager?
@@ -83,6 +96,9 @@ public class PrivateMatchManager : MonoBehaviour
         {
             Debug.LogError($"Failed to initialize UGS: {e.Message}");
         }
+
+
+        OnLobbyStateBroadcast += HandleLobbyStateUpdate;
     }
 
     private async Task SignInAnonymouslyAsync()
@@ -181,6 +197,10 @@ public class PrivateMatchManager : MonoBehaviour
 
             await InitializePlayerDefaultData();
             await SubscribeToLobbyEvents();
+
+            // Start sending heartbeats when lobby is created successfully
+            StartHeartbeat();
+
             RequestLobbyStateRefresh("Post CreateLobbyAsync");
             return LobbyCode;
         }
@@ -814,9 +834,19 @@ public class PrivateMatchManager : MonoBehaviour
         }
     }
 
+    private void HandleLobbyStateUpdate(List<LobbyPlayerData> playersData, string localPlayerId, bool isLocalPlayerHost)
+    {
+        // Check if local player is host and all players are ready
+        if (isLocalPlayerHost && AreAllPlayersReady(playersData) && !countdownActive)
+        {
+            StartGameCountdown();
+        }
+    }
+
     private async void OnLobbyDeleted()
     {
         Debug.Log("Lobby deleted event received.");
+        StopHeartbeat(); // Stop sending heartbeats when lobby is deleted
         _currentLobby = null;
         IsHost = false;
         _subscribedToLobbyEvents = false;
@@ -873,6 +903,12 @@ public class PrivateMatchManager : MonoBehaviour
             Debug.LogWarning("OnPlayersLeft: _currentLobby is null. Requesting full fetch.");
             RequestLobbyStateRefresh("PlayerLeft with null lobby");
             return;
+        }
+
+        // If countdown is active, cancel it since a player left
+        if (countdownActive && IsHost)
+        {
+            CancelGameCountdown();
         }
 
         // Sort indices in descending order to safely remove elements from the list
@@ -932,6 +968,12 @@ public class PrivateMatchManager : MonoBehaviour
             return;
         }
 
+        // Check for countdown notification
+        if (lobbyDataChanges.ContainsKey(LobbyDataKeyCountdownStarted))
+        {
+            HandleCountdownNotification(lobbyDataChanges[LobbyDataKeyCountdownStarted]);
+        }
+
         // Log details for diagnostics
         foreach (var entry in lobbyDataChanges)
         {
@@ -950,6 +992,33 @@ public class PrivateMatchManager : MonoBehaviour
         RequestLobbyStateRefresh("LobbyDataChanged update");
     }
 
+    private void HandleCountdownNotification(ChangedOrRemovedLobbyValue<DataObject> countdownChange)
+    {
+        if (countdownChange.Removed || countdownChange.Value == null)
+        {
+            return;
+        }
+
+        string countdownStarted = countdownChange.Value.Value;
+        Debug.Log($"Received countdown status update: {countdownStarted}");
+
+        // If we're not the host and countdown is starting, start local countdown
+        if (!IsHost && countdownStarted == "true" && !countdownActive)
+        {
+            Debug.Log("Client starting local countdown based on lobby notification");
+            countdownActive = true;
+            countdownTimeRemaining = gameStartCountdownDuration;
+            OnCountdownTick?.Invoke(countdownTimeRemaining);
+        }
+        // If countdown is cancelled
+        else if (countdownStarted == "false" && countdownActive)
+        {
+            Debug.Log("Client cancelling local countdown based on lobby notification");
+            countdownActive = false;
+            countdownTimeRemaining = 0;
+        }
+    }
+
     private void OnPlayerDataChanged(Dictionary<int, Dictionary<string, ChangedOrRemovedLobbyValue<PlayerDataObject>>> changesByPlayerIndex)
     {
         Debug.Log("Player data changed event received.");
@@ -958,6 +1027,31 @@ public class PrivateMatchManager : MonoBehaviour
             Debug.LogWarning("OnPlayerDataChanged: _currentLobby is null. Requesting full fetch as a fallback.");
             RequestLobbyStateRefresh("PlayerDataChanged with null lobby");
             return;
+        }
+
+        // If a player's ready state changed to false, cancel countdown
+        if (countdownActive && IsHost)
+        {
+            foreach (var playerIndexEntry in changesByPlayerIndex)
+            {
+                int playerIndex = playerIndexEntry.Key;
+                if (playerIndex < 0 || playerIndex >= _currentLobby.Players.Count) continue;
+
+                if (playerIndexEntry.Value.ContainsKey(PlayerDataKeyIsReady))
+                {
+                    var readyChange = playerIndexEntry.Value[PlayerDataKeyIsReady];
+                    if (!readyChange.Removed && readyChange.Value != null)
+                    {
+                        bool isReady = false;
+                        bool.TryParse(readyChange.Value.Value, out isReady);
+                        if (!isReady)
+                        {
+                            CancelGameCountdown();
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         bool successfullyPatched = true; // Assume success, set to false on issues
@@ -1018,20 +1112,196 @@ public class PrivateMatchManager : MonoBehaviour
         }
     }
 
+    // Check if all players are ready
+    private bool AreAllPlayersReady(List<LobbyPlayerData> players)
+    {
+        // Require at least 2 players (can adjust based on game requirements)
+        if (players.Count < 2)
+        {
+            return false;
+        }
+
+        // Check that all players are ready
+        foreach (var player in players)
+        {
+            if (!player.IsReady)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public async void StartGameCountdown()
+    {
+        if (!IsHost) return;
+
+        Debug.Log("All players ready! Starting game countdown.");
+        countdownActive = true;
+        countdownTimeRemaining = gameStartCountdownDuration;
+        OnCountdownTick?.Invoke(countdownTimeRemaining);
+
+        // Update lobby data to notify all clients about countdown start
+        try
+        {
+            var options = new UpdateLobbyOptions
+            {
+                Data = new Dictionary<string, DataObject>
+                {
+                    {
+                        LobbyDataKeyCountdownStarted,
+                        new DataObject(
+                            visibility: DataObject.VisibilityOptions.Member,
+                            value: "true"
+                        )
+                    }
+                }
+            };
+
+            await LobbyService.Instance.UpdateLobbyAsync(_currentLobby.Id, options);
+            Debug.Log("Lobby data updated: Countdown started notification sent");
+        }
+        catch (LobbyServiceException e)
+        {
+            Debug.LogError($"Failed to update lobby with countdown started notification: {e.Message}");
+        }
+    }
+
+    // Cancel countdown if a player leaves or changes ready state
+    public async void CancelGameCountdown()
+    {
+        if (!countdownActive) return;
+
+        Debug.Log("Game countdown cancelled.");
+        countdownActive = false;
+        countdownTimeRemaining = 0;
+
+        // Only the host should update the lobby data
+        if (IsHost && _currentLobby != null)
+        {
+            try
+            {
+                var options = new UpdateLobbyOptions
+                {
+                    Data = new Dictionary<string, DataObject>
+                    {
+                        {
+                            LobbyDataKeyCountdownStarted,
+                            new DataObject(
+                                visibility: DataObject.VisibilityOptions.Member,
+                                value: "false"
+                            )
+                        }
+                    }
+                };
+
+                await LobbyService.Instance.UpdateLobbyAsync(_currentLobby.Id, options);
+                Debug.Log("Lobby data updated: Countdown cancelled notification sent");
+            }
+            catch (LobbyServiceException e)
+            {
+                Debug.LogError($"Failed to update lobby with countdown cancelled notification: {e.Message}");
+            }
+        }
+    }
+
+    // Start the game after countdown completes
+    private void StartGame()
+    {
+        // Only host can actually start the game
+        if (!IsHost)
+        {
+            Debug.Log("Countdown complete on client. Waiting for host to start game...");
+            return;
+        }
+
+        Debug.Log("Countdown complete! Host starting game...");
+        // Logic to start the game - using your existing game manager
+        // networkGameManager.StartGame();
+    }
+
+    private void StartHeartbeat()
+    {
+        if (!IsHost || _currentLobby == null)
+        {
+            Debug.Log("Not starting heartbeat - either not host or no lobby exists");
+            return;
+        }
+
+        Debug.Log($"Starting heartbeat for lobby {_currentLobby.Id}");
+        StopHeartbeat(); // Ensure any existing heartbeat is stopped
+        _heartbeatCoroutine = StartCoroutine(SendHeartbeatsPeriodically());
+    }
+
+    private void StopHeartbeat()
+    {
+        if (_heartbeatCoroutine != null)
+        {
+            Debug.Log("Stopping heartbeat");
+            StopCoroutine(_heartbeatCoroutine);
+            _heartbeatCoroutine = null;
+        }
+    }
+
+    private IEnumerator SendHeartbeatsPeriodically()
+    {
+        while (IsHost && _currentLobby != null)
+        {
+            yield return new WaitForSeconds(HEARTBEAT_INTERVAL);
+
+            if (_currentLobby == null || !IsHost)
+            {
+                Debug.Log("Lobby no longer exists or no longer host. Stopping heartbeat coroutine.");
+                break;
+            }
+
+            try
+            {
+                // Fire and forget - we don't need to await this
+                LobbyService.Instance.SendHeartbeatPingAsync(_currentLobby.Id).ContinueWith(task =>
+                {
+                    if (task.IsFaulted)
+                    {
+                        Debug.LogError($"Failed to send heartbeat: {task.Exception.GetBaseException().Message}");
+                        // Optionally handle specific exceptions like LobbyNotFound differently
+                    }
+                    else
+                    {
+                        Debug.Log($"Heartbeat sent successfully for lobby {_currentLobby.Id}");
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error attempting to send heartbeat: {e.Message}");
+            }
+        }
+    }
+
     // --- Cleanup ---
     private async void OnDestroy()
     {
         Debug.Log("PrivateMatchManager OnDestroy: Initiating cleanup.");
+        // Stop heartbeat immediately to avoid any issues during cleanup
+        StopHeartbeat();
+
         // Unsubscription from Lobby Events: The UGS documentation isn't perfectly clear on explicit unsubscription for ILobbyEvents.
         // It's often handled implicitly when the connection drops or the service instance is disposed.
         // For now, we set our flag and rely on SDK behavior or future clarification for explicit unsubscription.
         _subscribedToLobbyEvents = false;
         await LeaveLobbyAndCleanupAsync(isQuitting: true);
+
+        OnLobbyStateBroadcast -= HandleLobbyStateUpdate;
     }
 
     public async Task LeaveLobbyAndCleanupAsync(bool isQuitting = false)
     {
         Debug.Log($"LeaveLobbyAndCleanupAsync called. IsQuitting: {isQuitting}");
+
+        // Always stop the heartbeat when leaving a lobby
+        StopHeartbeat();
+
         _subscribedToLobbyEvents = false; // Mark as not subscribed regardless of explicit unsubscribe call.
 
         string lobbyIdToLeave = _currentLobby?.Id; // Cache ID before _currentLobby is nulled
@@ -1101,6 +1371,23 @@ public class PrivateMatchManager : MonoBehaviour
             NetworkManager.Singleton.Shutdown();
         }
         if (_queuedFetchCoroutine != null) { StopCoroutine(_queuedFetchCoroutine); _queuedFetchCoroutine = null; }
+    }
+
+    private void Update()
+    {
+        // Only run countdown timer if active
+        if (countdownActive && countdownTimeRemaining > 0)
+        {
+            countdownTimeRemaining -= Time.deltaTime;
+            OnCountdownTick?.Invoke(countdownTimeRemaining);
+
+            if (countdownTimeRemaining <= 0)
+            {
+                countdownActive = false;
+                OnCountdownComplete?.Invoke();
+                StartGame();
+            }
+        }
     }
 }
 
