@@ -6,17 +6,30 @@ public class NetworkGameManager : NetworkBehaviour
 {
     [Header("Client-side Managers")]
     [SerializeField] private GameManager gameManager;
+    [SerializeField] private MenuManager menuManager;
 
     [Header("Network Setup")]
     [SerializeField] private GameObject playersParent;
     [SerializeField] private int requiredPlayerCount = 2;
 
-    private void Awake()
+    private void ValidateDependencies()
     {
         if (gameManager == null)
         {
-            Debug.LogError("NetworkGameManager is not properly initialized. Some references are not assigned.");
+            Debug.LogError("NetworkGameManager: gameManager is not assigned.");
+            this.enabled = false;
         }
+
+        if (menuManager == null)
+        {
+            Debug.LogError("NetworkGameManager: menuManager is not assigned.");
+            this.enabled = false;
+        }
+    }
+
+    private void Awake()
+    {
+        ValidateDependencies();
     }
 
     public override void OnNetworkSpawn()
@@ -26,6 +39,14 @@ public class NetworkGameManager : NetworkBehaviour
             Debug.Log("NetworkGameManager: Server spawned.");
             // Server waits for all players to be ready before starting the game
             // StartCoroutine(WaitForPlayersAndStartGame());
+        }
+    }
+
+    public void StartGame()
+    {
+        if (IsServer)
+        {
+            StartGameClientRpc();
         }
     }
 
@@ -61,6 +82,8 @@ public class NetworkGameManager : NetworkBehaviour
     {
         if (!IsClient) return;
 
+        Debug.Log("NetworkGameManager: StartGameClientRpc");
+
         // Get the local player
         Player localPlayer = GetLocalPlayer();
 
@@ -72,6 +95,8 @@ public class NetworkGameManager : NetworkBehaviour
 
         // Initialize client-side managers
         SetupClientManagers(localPlayer);
+
+        menuManager.ClearAll();
     }
 
     private Player GetLocalPlayer()

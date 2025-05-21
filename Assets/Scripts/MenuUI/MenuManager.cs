@@ -1,15 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
+using System.Linq;
 
 public class MenuManager : MonoBehaviour
 {
     [SerializeField] private MenuPanel initialMenuPanel;
 
+    [SerializeField] private List<MenuPanel> currentMenuStack = new List<MenuPanel>();
+
     private Stack<MenuPanel> menuStack = new Stack<MenuPanel>();
 
     private void Start()
     {
+        MenuPanel[] menuPanels = GetComponentsInChildren<MenuPanel>(true);
+        foreach (MenuPanel panel in menuPanels)
+        {
+            panel.gameObject.SetActive(false);
+        }
+
         if (initialMenuPanel != null)
         {
             OpenMenuPanel(initialMenuPanel);
@@ -26,6 +34,7 @@ public class MenuManager : MonoBehaviour
         }
 
         menuStack.Push(menuPanel);
+        UpdateStackDebugView();
     }
 
     public void CloseMenuPanel()
@@ -35,6 +44,7 @@ public class MenuManager : MonoBehaviour
             menuStack.Pop().gameObject.SetActive(false);
 
             menuStack.Peek().gameObject.SetActive(true);
+            UpdateStackDebugView();
         }
         else
         {
@@ -42,6 +52,33 @@ public class MenuManager : MonoBehaviour
         }
     }
 
+    public void ClearStackHistory()
+    {
+        while (menuStack.Count > 1)
+        {
+            menuStack.Pop().gameObject.SetActive(false);
+        }
+        UpdateStackDebugView();
+    }
+
+    public void ClearAll()
+    {
+        while (menuStack.Count > 0)
+        {
+            menuStack.Pop().gameObject.SetActive(false);
+        }
+        UpdateStackDebugView();
+    }
+
+    private void UpdateStackDebugView()
+    {
+        currentMenuStack.Clear();
+        // Stack is LIFO, so we need to reverse it to show the stack order in the Inspector
+        foreach (var panel in menuStack.Reverse())
+        {
+            currentMenuStack.Add(panel);
+        }
+    }
 
     public void QuitGame()
     {

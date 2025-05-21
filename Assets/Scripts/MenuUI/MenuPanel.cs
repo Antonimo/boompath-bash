@@ -4,6 +4,7 @@ using UnityEngine.UI;
 public class MenuPanel : MonoBehaviour
 {
     [SerializeField] private Button backButton;
+    [SerializeField] private bool clearStackHistory = false;
 
     private void OnEnable()
     {
@@ -11,12 +12,22 @@ public class MenuPanel : MonoBehaviour
         {
             backButton.onClick.AddListener(OnBackButtonClicked);
         }
+
+        // TODO: onOpen that is called from the MenuManager?
+        if (clearStackHistory)
+        {
+            GetMenuManager().ClearStackHistory();
+        }
     }
 
     private void OnBackButtonClicked()
     {
-        MenuManager menuManager = GetComponentInParent<MenuManager>();
-        menuManager.CloseMenuPanel();
+        GetMenuManager().CloseMenuPanel();
+    }
+
+    private MenuManager GetMenuManager()
+    {
+        return GetComponentInParent<MenuManager>();
     }
 
 }

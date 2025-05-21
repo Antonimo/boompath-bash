@@ -1749,7 +1749,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 42
+  orthographic size: 42.5
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1774,7 +1774,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071069, y: 0.00000010523945, z: -0.000000023748726, w: 0.70710677}
-  m_LocalPosition: {x: 0.91926193, y: 66.08175, z: 34.264523}
+  m_LocalPosition: {x: -0, y: 80, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2229,12 +2229,12 @@ GameObject:
   - component: {fileID: 387450953}
   - component: {fileID: 387450952}
   m_Layer: 0
-  m_Name: Button
+  m_Name: StartCountdownButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &387450951
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2953,6 +2953,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   gameManager: {fileID: 691212229}
+  menuManager: {fileID: 974042091}
   playersParent: {fileID: 872770584}
   requiredPlayerCount: 2
 --- !u!1 &473385988
@@ -5723,7 +5724,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3651706615383154314, guid: 8feafc25754a34de181e6660b44df12f, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6768718754033138657, guid: 8feafc25754a34de181e6660b44df12f, type: 3}
+      propertyPath: clearStackHistory
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6980973947617049951, guid: 8feafc25754a34de181e6660b44df12f, type: 3}
       propertyPath: m_AnchorMax.x
@@ -6647,6 +6652,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   initialMenuPanel: {fileID: 1963501514}
+  currentMenuStack: []
 --- !u!1001 &976795121
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10934,6 +10940,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   backButton: {fileID: 0}
+  clearStackHistory: 0
 --- !u!1 &1965428109
 GameObject:
   m_ObjectHideFlags: 0

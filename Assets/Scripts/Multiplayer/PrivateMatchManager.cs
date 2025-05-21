@@ -29,7 +29,7 @@ public class PrivateMatchManager : MonoBehaviour
     // TODO: broeadcast state updates such as lobby deleted / disconnected / etc
 
     [Header("Game Start Settings")]
-    [SerializeField] private float gameStartCountdownDuration = 5f; // Countdown in seconds before game starts
+    [SerializeField] private float gameStartCountdownDuration = 3f; // Countdown in seconds before game starts
     private bool countdownActive = false;
     private float countdownTimeRemaining = 0f;
     private const string LobbyDataKeyCountdownStarted = "CountdownStarted";
@@ -71,7 +71,6 @@ public class PrivateMatchManager : MonoBehaviour
         {
             Debug.LogError("PrivateMatchManager: HostStartupManager not found in the scene!");
             enabled = false;
-            return;
         }
 
         if (networkGameManager == null)
@@ -1218,7 +1217,7 @@ public class PrivateMatchManager : MonoBehaviour
 
         Debug.Log("Countdown complete! Host starting game...");
         // Logic to start the game - using your existing game manager
-        // networkGameManager.StartGame();
+        networkGameManager.StartGame();
     }
 
     private void StartHeartbeat()
