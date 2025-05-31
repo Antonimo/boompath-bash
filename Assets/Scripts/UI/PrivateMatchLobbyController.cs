@@ -4,8 +4,6 @@ using System.Collections; // For IEnumerator
 
 public class PrivateMatchLobbyController : MonoBehaviour
 {
-    private PrivateMatchManager privateMatchManager;
-
     [Header("UI References")]
     [SerializeField] private TextMeshProUGUI lobbyCodeText;
     [SerializeField] private TextMeshProUGUI statusText;
@@ -19,10 +17,9 @@ public class PrivateMatchLobbyController : MonoBehaviour
 
     private void ValidateDependencies()
     {
-        privateMatchManager = FindFirstObjectByType<PrivateMatchManager>();
-        if (privateMatchManager == null)
+        if (LobbyManager.Instance == null)
         {
-            Debug.LogError("PrivateMatchLobbyController: PrivateMatchManager not found in the scene!");
+            Debug.LogError("PrivateMatchLobbyController: LobbyService instance not found!");
             enabled = false;
             return;
         }
@@ -57,8 +54,8 @@ public class PrivateMatchLobbyController : MonoBehaviour
         copiedMessageText.gameObject.SetActive(false); // Hide "Copied!" message initially
 
         // Subscribe to countdown events
-        PrivateMatchManager.OnCountdownTick += HandleCountdownTick;
-        PrivateMatchManager.OnCountdownComplete += HandleCountdownComplete;
+        LobbyManager.OnCountdownTick += HandleCountdownTick;
+        LobbyManager.OnCountdownComplete += HandleCountdownComplete;
 
         // Hide countdown UI initially
         countdownPanel.SetActive(false);
@@ -70,19 +67,17 @@ public class PrivateMatchLobbyController : MonoBehaviour
         // Player list and its specific statuses are handled by LobbyPlayerListController.
         // This controller focuses on lobby code and high-level status not covered by LobbyPlayerListController.
 
-        // Request lobby data refresh to update player list and other lobby state
-        privateMatchManager.RequestLobbyStateRefresh("PrivateMatchLobbyController OnEnable");
+        // Request lobby state broadcast to update UI components
+        LobbyManager.Instance.RequestLobbyStateBroadcast();
 
         Debug.Log("PrivateMatchLobbyController: OnEnable - END");
     }
 
     void OnDisable()
     {
-        if (privateMatchManager == null) return; // Guard against potential null ref if disabled early
-
         // Unsubscribe from countdown events
-        PrivateMatchManager.OnCountdownTick -= HandleCountdownTick;
-        PrivateMatchManager.OnCountdownComplete -= HandleCountdownComplete;
+        LobbyManager.OnCountdownTick -= HandleCountdownTick;
+        LobbyManager.OnCountdownComplete -= HandleCountdownComplete;
 
         Debug.Log("PrivateMatchLobbyController: OnDisable");
         StopAllCoroutines(); // Stop any running coroutines, like ShowCopiedMessage
@@ -105,7 +100,7 @@ public class PrivateMatchLobbyController : MonoBehaviour
 
     private void GetLobbyCode()
     {
-        string currentLobbyCode = privateMatchManager.GetCurrentLobbyCode();
+        string currentLobbyCode = LobbyManager.Instance.LobbyCode;
         lobbyCodeText.text = !string.IsNullOrEmpty(currentLobbyCode) ? currentLobbyCode : "----";
         Debug.Log($"PrivateMatchLobbyController: Got current lobby code: {currentLobbyCode}");
     }

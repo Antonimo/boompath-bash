@@ -5,7 +5,6 @@ using System.Collections; // For IEnumerator
 // TODO: DRY with PrivateMatchLobbyController - maybe shared sub component?
 public class PrivateMatchGameOverController : MonoBehaviour
 {
-    private PrivateMatchManager privateMatchManager;
     private NetworkGameManager networkGameManager;
 
     [Header("UI References")]
@@ -19,10 +18,9 @@ public class PrivateMatchGameOverController : MonoBehaviour
 
     private void ValidateDependencies()
     {
-        privateMatchManager = FindFirstObjectByType<PrivateMatchManager>();
-        if (privateMatchManager == null)
+        if (LobbyManager.Instance == null)
         {
-            Debug.LogError("PrivateMatchGameOverController: PrivateMatchManager not found in the scene!");
+            Debug.LogError("PrivateMatchGameOverController: LobbyService instance not found!");
             enabled = false;
             return;
         }
@@ -62,8 +60,8 @@ public class PrivateMatchGameOverController : MonoBehaviour
         if (!this.enabled) return;
 
         // Subscribe to countdown events (if needed for rematch functionality)
-        PrivateMatchManager.OnCountdownTick += HandleCountdownTick;
-        PrivateMatchManager.OnCountdownComplete += HandleCountdownComplete;
+        LobbyManager.OnCountdownTick += HandleCountdownTick;
+        LobbyManager.OnCountdownComplete += HandleCountdownComplete;
 
         // Hide countdown UI initially
         if (countdownPanel != null)
@@ -82,11 +80,9 @@ public class PrivateMatchGameOverController : MonoBehaviour
 
     void OnDisable()
     {
-        if (privateMatchManager == null) return; // Guard against potential null ref if disabled early
-
         // Unsubscribe from countdown events
-        PrivateMatchManager.OnCountdownTick -= HandleCountdownTick;
-        PrivateMatchManager.OnCountdownComplete -= HandleCountdownComplete;
+        LobbyManager.OnCountdownTick -= HandleCountdownTick;
+        LobbyManager.OnCountdownComplete -= HandleCountdownComplete;
 
         Debug.Log("PrivateMatchGameOverController: OnDisable");
         StopAllCoroutines(); // Stop any running coroutines
@@ -128,9 +124,9 @@ public class PrivateMatchGameOverController : MonoBehaviour
     public void ReturnToMainMenu()
     {
         Debug.Log("PrivateMatchGameOverController: Returning to main menu");
-        // Leave the lobby and return to main menu
-        _ = privateMatchManager.LeaveLobbyAndCleanupAsync();
-        // The menu navigation will be handled by the PrivateMatchManager cleanup
+        // Leave the lobby and return to main menu using LobbyService
+        _ = LobbyManager.Instance.LeaveLobbyAsync();
+        // The menu navigation will be handled by the LobbyService cleanup
     }
 
     public void RequestRematch()

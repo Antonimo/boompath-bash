@@ -107,6 +107,11 @@ public class NetworkGameManager : NetworkBehaviour
 
         Debug.Log("NetworkGameManager: StartGameClientRpc");
 
+        if (LobbyManager.Instance != null)
+        {
+            _ = LobbyManager.Instance.ClearLocalPlayerReadyState();
+        }
+
         // Get the local player
         Player localPlayer = GetLocalPlayer();
 

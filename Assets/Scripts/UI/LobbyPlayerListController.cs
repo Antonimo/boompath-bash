@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
-// using System.Linq; // Uncomment if LINQ is needed later
 
 public class LobbyPlayerListController : MonoBehaviour
 {
@@ -11,16 +10,14 @@ public class LobbyPlayerListController : MonoBehaviour
     public TextMeshProUGUI readyButtonText;
     public TextMeshProUGUI overallStatusText; // For messages like "Waiting for opponent", "All Ready"
 
-    private PrivateMatchManager privateMatchManager;
-    private bool localPlayerIsReady = false; // Internal state, updated from PrivateMatchManager
-    private string localPlayerId; // Set by PrivateMatchManager
+    private bool localPlayerIsReady = false; // Internal state, updated from LobbyService
+    private string localPlayerId; // Set by LobbyService
 
     private void ValidateDependencies()
     {
-        privateMatchManager = FindFirstObjectByType<PrivateMatchManager>();
-        if (privateMatchManager == null)
+        if (LobbyManager.Instance == null)
         {
-            Debug.LogError("LobbyPlayerListController: PrivateMatchManager not found!");
+            Debug.LogError("LobbyPlayerListController: LobbyService instance not found!");
             this.enabled = false;
             return;
         }
@@ -52,21 +49,27 @@ public class LobbyPlayerListController : MonoBehaviour
 
         InitializePlayerEntries();
 
-        PrivateMatchManager.OnLobbyStateBroadcast += HandleLobbyStateRefreshed;
+        // Subscribe to lobby events from the centralized service
+        LobbyManager.OnLobbyStateBroadcast += HandleLobbyStateRefreshed;
 
         // Initial UI state
         localPlayerIsReady = false; // Assume not ready until State syncs
         UpdateReadyButtonAppearance();
         overallStatusText.text = "Fetching lobby details...";
 
-        privateMatchManager.RequestLobbyStateRefresh("LobbyPlayerListController OnEnable");
+        // Request current lobby state without polling - the service maintains up-to-date state
+        // through events, so this just triggers a broadcast of the current state
+        LobbyManager.Instance.RequestLobbyStateBroadcast();
 
         readyToggleButton.onClick.AddListener(OnReadyToggleButtonClicked);
     }
 
     void OnDisable()
     {
-        PrivateMatchManager.OnLobbyStateBroadcast -= HandleLobbyStateRefreshed;
+        if (LobbyManager.Instance != null)
+        {
+            LobbyManager.OnLobbyStateBroadcast -= HandleLobbyStateRefreshed;
+        }
     }
 
     private void InitializePlayerEntries()
@@ -146,9 +149,10 @@ public class LobbyPlayerListController : MonoBehaviour
     private void OnReadyToggleButtonClicked()
     {
         Debug.Log($"LobbyPlayerListController: Ready button clicked. Current local ready: {localPlayerIsReady}. Toggling now.");
-        _ = privateMatchManager.ToggleLocalPlayerReadyState();
+
+        // Use the centralized service to toggle ready state
+        _ = LobbyManager.Instance.ToggleLocalPlayerReadyState();
 
         readyToggleButton.gameObject.SetActive(false);
     }
-
 }
