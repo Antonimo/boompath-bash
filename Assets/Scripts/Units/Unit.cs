@@ -19,6 +19,7 @@ public class Unit : NetworkBehaviour
         FollowingPath,
         Attacking,
         Dead
+        // TODO: Game Over State, celebrate win or be sad
     }
 
     // --- Networked Variables ---
@@ -65,17 +66,17 @@ public class Unit : NetworkBehaviour
     private Rigidbody rb;
     private Renderer unitRenderer;
 
-    // Debugging
-    [SerializeField] private bool enableDebugLogs = false;
-    [SerializeField] private bool enableUpdateDebugLogs = false;
-    [SerializeField] private bool enableFixedUpdateDebugLogs = false;
-
     // Combat properties
     [SerializeField] private float hitChance = 0.75f; // 70% chance to hit
     // TODO: damage dice? properties? modifiers? buff/debuff? etc...
     [SerializeField] private int minDamage = 10;
     [SerializeField] private int maxDamage = 34;
     [SerializeField] private Health health;
+
+    // Debugging
+    [SerializeField] private bool enableDebugLogs = false;
+    [SerializeField] private bool enableUpdateDebugLogs = false;
+    [SerializeField] private bool enableFixedUpdateDebugLogs = false;
 
     public override void OnNetworkSpawn()
     {

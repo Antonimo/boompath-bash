@@ -18,6 +18,13 @@ namespace GameState
 
             // TODO: disable all UI controllers (path drawing, player turn, etc.)
 
+            // TODO: update all units state
+
+            // TODO: switch to "Game Over" camera? (same as main menu camera?)
+
+            // TODO: disable bots?
+
+            // ------
             // TODO: Show game over UI
             // TODO: Display winner
             // TODO: Add restart/quit options
@@ -25,6 +32,7 @@ namespace GameState
 
         public override void HandleInput()
         {
+            /*
             // Handle input for restart/quit options
             if (Input.GetKeyDown(KeyCode.R))
             {
@@ -42,6 +50,7 @@ namespace GameState
                 Application.Quit();
 #endif
             }
+            */
         }
     }
 }

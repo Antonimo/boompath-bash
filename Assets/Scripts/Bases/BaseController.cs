@@ -9,7 +9,9 @@ public class BaseController : NetworkBehaviour
     public Player OwnerPlayer => ownerPlayer;
     [SerializeField] private GameObject unitPrefab;
     [SerializeField] private Transform spawnTo; // Where the spawned Unit will go when coming out of the base
-    [SerializeField] private Health health;
+    // TODO: what is better? expose the health component or have this component implement an interface of Health, for IsAlive checks and such?
+    // TODO: or should the acces be via the game object?
+    public Health health;
 
     [Header("Unit Production")]
     [SerializeField] private float unitSpawnInterval = 5f;  // Time between unit spawns

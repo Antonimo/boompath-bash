@@ -4,6 +4,33 @@ using System.Collections.Generic;
 using UnityEngine;
 using GameState;
 
+/// <summary>
+/// GameManager is a focused, low-level component responsible for core in-game mechanics and local game flow.
+/// 
+/// Key Responsibilities:
+/// - Manages game state transitions (waiting, player turns, path drawing, game over, etc.)
+/// - Handles local player interactions (unit selection, path drawing confirmation)
+/// - Manages in-game objects: Bases, Units, Camera positioning
+/// - Controls game flow and turn management for the current client
+/// 
+/// Architecture Position:
+/// - This is a LOWER-LAYER component with a single, well-defined responsibility
+/// - Operates independently without knowledge of higher-level networking or match orchestration systems
+/// - Designed to be controlled by higher-level managers that handle network coordination
+/// - This is NOT a NetworkBehaviour - it focuses purely on local game mechanics
+/// 
+/// Separation of Concerns:
+/// - GameManager handles "what happens in the game" (game rules, player actions, object interactions)
+/// - Higher layers handle "how the game is coordinated" (networking, lobbies, match setup)
+/// - This component should remain unaware of network topology, match management, or lobby systems
+/// - Receives commands from above but doesn't initiate network operations or match-level decisions
+/// 
+/// Network vs Local Gameplay:
+/// - In networked games: Manages local player experience while higher layers coordinate multiplayer
+///   (the turn flow repeats for the same player in network mode)
+/// - In local games: Would manage multiple players on the same screen, switching turns between them
+/// 
+/// </summary>
 public class GameManager : MonoBehaviour
 {
     private GameStateMachine stateMachine;
@@ -11,7 +38,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private GameStateType initialGameState = GameStateType.WaitingForPlayers;
 
-    // Expose current state in inspector
+    // TODO: Expose current state in inspector
     public GameStateType CurrentState => stateMachine?.CurrentStateType ?? GameStateType.GameStart;
 
     // Player management
@@ -38,8 +65,21 @@ public class GameManager : MonoBehaviour
     [SerializeField] private bool enableDebugLogs = true;
     public bool EnableDebugLogs => enableDebugLogs;
 
+    // Winner tracking
+    private Player winnerPlayer = null;
+    public Player WinnerPlayer => winnerPlayer;
+
+    private void ValidateDependencies()
+    {
+        if (playersParent == null)
+        {
+            Debug.LogError("GameManager: playersParent is not assigned. Please assign a parent object for players.");
+        }
+    }
+
     private void Awake()
     {
+        ValidateDependencies();
         InitializeStateMachine();
     }
 
@@ -68,6 +108,8 @@ public class GameManager : MonoBehaviour
     private void LateUpdate()
     {
         stateMachine?.HandleInput();
+
+        CheckGameOverConditions();
     }
 
     private void InitializeStateMachine()
@@ -238,5 +280,63 @@ public class GameManager : MonoBehaviour
     public void StartGame()
     {
         stateMachine.ChangeState(GameStateType.GameStart);
+    }
+
+    private static bool CanEndGameFromState(GameStateType state)
+    {
+        switch (state)
+        {
+            case GameStateType.PlayerTurn:
+            case GameStateType.PathDrawing:
+            case GameStateType.PlayerTurnEnd:
+            case GameStateType.Paused:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void CheckGameOverConditions()
+    {
+        // Debug.Log($"[GameManager] CheckGameOverConditions: CurrentState: {CurrentState}: CanEndGameFromState: {CanEndGameFromState(CurrentState)}");
+
+        // TODO: host only? How does that work together with the idea that this is not a network object?
+        if (!CanEndGameFromState(CurrentState))
+        {
+            return;
+        }
+
+        int aliveBases = 0;
+        BaseController aliveBase = null;
+
+        BaseController[] allBases = playersParent.GetComponentsInChildren<BaseController>();
+        foreach (var baseController in allBases)
+        {
+            if (baseController.enabled && baseController.health.IsAlive)
+            {
+                aliveBases++;
+                aliveBase = baseController; // Keep reference to the last alive base
+            }
+        }
+
+        // Debug.Log($"[GameManager] CheckGameOverConditions: Alive bases: {aliveBases} out of {allBases.Length}");
+
+        if (aliveBases <= 1)
+        {
+            // Determine the winner
+            if (aliveBases == 1 && aliveBase != null)
+            {
+                winnerPlayer = aliveBase.OwnerPlayer;
+                Debug.Log($"[GameManager] Game over - Winner: {winnerPlayer?.playerName ?? "Unknown"}");
+            }
+            else
+            {
+                winnerPlayer = null; // Draw/no winner
+                Debug.Log("[GameManager] Game over - No winner (draw)");
+            }
+
+            // Debug.Log($"[GameManager] CheckGameOverConditions: Game over condition met. Changing state to GameOver.");
+            stateMachine.ChangeState(GameStateType.GameOver);
+        }
     }
 }

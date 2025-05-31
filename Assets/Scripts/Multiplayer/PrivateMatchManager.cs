@@ -835,6 +835,9 @@ public class PrivateMatchManager : MonoBehaviour
 
     private void HandleLobbyStateUpdate(List<LobbyPlayerData> playersData, string localPlayerId, bool isLocalPlayerHost)
     {
+        // TODO: this should remain disabled after coundown completes, ignoring lobby updates, until we are back 
+        // to the state when this is relevant...
+        //
         // Check if local player is host and all players are ready
         if (isLocalPlayerHost && AreAllPlayersReady(playersData) && !countdownActive)
         {
