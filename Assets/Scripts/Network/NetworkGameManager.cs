@@ -3,6 +3,33 @@ using Unity.Netcode;
 using System.Collections;
 using GameState;
 
+/// <summary>
+/// NetworkGameManager is a MID-LEVEL component that wraps GameManager with network-related operations.
+/// 
+/// Key Responsibilities:
+/// - Network synchronization: Syncing relevant game state changes from host across all clients
+/// - Game flow coordination: Coordinating distributed game flow (game start, pause, game over)
+/// - Local player management: Finding and setting up the local player for GameManager
+/// - Network event handling: Responding to network-relevant game state changes
+/// - UI coordination: Managing game-related UI in response to network events
+/// 
+/// Architecture Position:
+/// - This is a MIDDLE-LAYER component that bridges high-level match orchestration with low-level game mechanics
+/// - Wraps and extends GameManager with network awareness and coordination
+/// - Receives coordination commands from higher-level managers (PrivateMatchManager)
+/// - Translates network events into local game actions and vice versa
+/// - Focused on network-related game logic, not network setup or match orchestration
+/// 
+/// Separation of Concerns:
+/// - PrivateMatchManager handles "how matches are set up" (lobbies, network setup, transitions)
+/// - NetworkGameManager handles "how the game is networked" (sync, coordination, distributed flow)
+/// - GameManager handles "what happens in the game" (local mechanics, player interactions)
+/// 
+/// Network vs Local Operations:
+/// - Manages the network layer for game-specific operations (not match-level operations)
+/// - Coordinates game state synchronization without knowing about lobby or match setup details
+/// - Provides network-aware game control while keeping GameManager network-agnostic
+/// </summary>
 public class NetworkGameManager : NetworkBehaviour
 {
     [Header("Client-side Managers")]
@@ -14,6 +41,7 @@ public class NetworkGameManager : NetworkBehaviour
 
     [Header("Network Setup")]
     [SerializeField] private GameObject playersParent;
+    [SerializeField] private PlayerSpawnManager playerSpawnManager;
     [SerializeField] private int requiredPlayerCount = 2;
 
     private void ValidateDependencies()
@@ -35,6 +63,12 @@ public class NetworkGameManager : NetworkBehaviour
             Debug.LogError("NetworkGameManager: gameOverPanel is not assigned.");
             this.enabled = false;
         }
+
+        if (playerSpawnManager == null)
+        {
+            Debug.LogError("NetworkGameManager: playerSpawnManager is not assigned.");
+            this.enabled = false;
+        }
     }
 
     private void Awake()
@@ -50,8 +84,8 @@ public class NetworkGameManager : NetworkBehaviour
         if (IsServer)
         {
             Debug.Log("NetworkGameManager: Server spawned.");
-            // Server waits for all players to be ready before starting the game
-            // StartCoroutine(WaitForPlayersAndStartGame());
+            // Server waits for all players to be ready before setting up and launching the game
+            // StartCoroutine(WaitForPlayersAndSetupGame());
         }
     }
 
@@ -64,15 +98,19 @@ public class NetworkGameManager : NetworkBehaviour
         }
     }
 
-    public void StartGame()
+    public void SetupAndLaunchGame()
     {
         if (IsServer)
         {
-            StartGameClientRpc();
+            // TODO: do not despawn/respawn if its a new game and not a rematch
+
+            playerSpawnManager.DespawnAllPlayers();
+
+            SetupAndLaunchGameClientRpc();
         }
     }
 
-    private IEnumerator WaitForPlayersAndStartGame()
+    private IEnumerator WaitForPlayersAndSetupGame()
     {
         // Wait until all expected players are connected and spawned
         while (!AreAllPlayersReady())
@@ -80,8 +118,8 @@ public class NetworkGameManager : NetworkBehaviour
             yield return new WaitForSeconds(0.5f);
         }
 
-        // All players are ready, start the game on all clients
-        StartGameClientRpc();
+        // All players are ready, setup and launch the game on all clients
+        SetupAndLaunchGameClientRpc();
     }
 
     private bool AreAllPlayersReady()
@@ -100,31 +138,32 @@ public class NetworkGameManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void StartGameClientRpc()
+    private void SetupAndLaunchGameClientRpc()
     {
         // TODO: review all the flows with this check, I was confused that IsHost is also IsClient
         if (!IsClient) return;
 
-        Debug.Log("NetworkGameManager: StartGameClientRpc");
+        Debug.Log("NetworkGameManager: SetupAndLaunchGameClientRpc - Beginning game setup and launch");
 
+        // Player localPlayer = GetLocalPlayer();
+
+        // if (localPlayer == null)
+        // {
+        //     Debug.LogError("Local player not found during game setup and launch!");
+        //     return;
+        // }
+
+        SetupClientManagers();
+
+        gameManager.LoadGame();
+
+        menuManager.ClearAll();
+
+        // TODO: move this to when the gameState changes to GameStart?
         if (LobbyManager.Instance != null)
         {
             _ = LobbyManager.Instance.ClearLocalPlayerReadyState();
         }
-
-        // Get the local player
-        Player localPlayer = GetLocalPlayer();
-
-        if (localPlayer == null)
-        {
-            Debug.LogError("Local player not found during game start!");
-            return;
-        }
-
-        // Initialize client-side managers
-        SetupClientManagers(localPlayer);
-
-        menuManager.ClearAll();
     }
 
     private Player GetLocalPlayer()
@@ -145,18 +184,12 @@ public class NetworkGameManager : NetworkBehaviour
         return null;
     }
 
-    private void SetupClientManagers(Player localPlayer)
+    private void SetupClientManagers()
     {
-        // Initialize GameManager with the local player
-        if (gameManager != null)
-        {
-            // Subscribe to network-relevant state changes
-            gameManager.StateMachine.OnNetworkRelevantGameStateChanged += OnNetworkRelevantGameStateChanged;
-
-            // Set the current player in GameManager
-            gameManager.SetupLocalPlayer(localPlayer);
-            gameManager.StartGame();
-        }
+        // TODO: make sure to subscribe only if not already subscribed
+        // TODO: make sure cleanup happens when relevant
+        // Subscribe to network-relevant state changes
+        gameManager.StateMachine.OnNetworkRelevantGameStateChanged += OnNetworkRelevantGameStateChanged;
     }
 
     private void OnNetworkRelevantGameStateChanged(GameStateType fromState, GameStateType toState)
@@ -209,9 +242,77 @@ public class NetworkGameManager : NetworkBehaviour
     {
         Debug.Log("[NetworkGameManager] Handling WaitingForPlayers state");
 
-        // This state is typically set by NetworkGameManager itself, not GameManager
-        // But we can handle UI updates here
-        ShowWaitingForPlayersUI();
+        // Request from host to spawn the player prefab
+        if (IsClient)
+        {
+            Debug.Log("[NetworkGameManager] Client requesting player spawn from host");
+            RequestPlayerSpawnServerRpc();
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestPlayerSpawnServerRpc(ServerRpcParams serverRpcParams = default)
+    {
+        if (!IsServer) return;
+
+        ulong clientId = serverRpcParams.Receive.SenderClientId;
+        Debug.Log($"[NetworkGameManager] Host received player spawn request from client {clientId}");
+
+        // Spawn/respawn the player for this specific client
+        playerSpawnManager.RespawnPlayer(clientId);
+
+        // After spawning, check if all players are now ready to start the game
+        if (AreAllPlayersSpawned())
+        {
+            Debug.Log("[NetworkGameManager] All players spawned! Transitioning to GameStart state.");
+            StartGameClientRpc();
+        }
+    }
+
+    // TODO: streamline flow management into the Update method?
+    // with checks for isInGame for checking if can transition to GameStart?
+    private bool AreAllPlayersSpawned()
+    {
+        if (playersParent == null) return false;
+
+        Player[] players = playersParent.GetComponentsInChildren<Player>();
+        bool hasEnoughPlayers = players.Length >= requiredPlayerCount;
+
+        if (hasEnoughPlayers)
+        {
+            Debug.Log($"[NetworkGameManager] All players spawned. Found {players.Length} players.");
+        }
+
+        return hasEnoughPlayers;
+    }
+
+    [ClientRpc]
+    private void StartGameClientRpc()
+    {
+        if (!IsClient) return;
+
+        Debug.Log("[NetworkGameManager] Received transition to GameStart from server");
+
+        // Get the local player now that all players are spawned
+        Player localPlayer = GetLocalPlayer();
+
+        if (localPlayer == null)
+        {
+            Debug.LogError("Local player not found when starting the game!");
+            return;
+        }
+
+        // Force all clients to enter GameStart state
+        if (gameManager != null && gameManager.CurrentState == GameStateType.WaitingForPlayers)
+        {
+            gameManager.SetupLocalPlayer(localPlayer);
+
+            gameManager.StartGame();
+        }
+        else
+        {
+            Debug.LogWarning($"[NetworkGameManager] Cannot transition to GameStart - current state is {gameManager?.CurrentState}");
+        }
     }
 
     [ClientRpc]
@@ -261,13 +362,6 @@ public class NetworkGameManager : NetworkBehaviour
         // Example: menuManager.ShowPausePanel();
     }
 
-    private void ShowWaitingForPlayersUI()
-    {
-        // TODO: Show waiting for players UI
-        Debug.Log("[NetworkGameManager] Showing WaitingForPlayers UI");
-
-        // Example: menuManager.ShowWaitingForPlayersPanel();
-    }
 
     /// <summary>
     /// Gets the winner player name from the GameManager

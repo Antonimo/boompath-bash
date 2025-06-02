@@ -4,9 +4,7 @@ namespace GameState
 {
     public class WaitingForPlayersState : BaseGameState
     {
-        public WaitingForPlayersState(GameManager gameManager) : base(gameManager)
-        {
-        }
+        public WaitingForPlayersState(GameManager gameManager) : base(gameManager) { }
 
         public override void Enter()
         {

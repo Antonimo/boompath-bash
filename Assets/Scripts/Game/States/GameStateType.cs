@@ -2,6 +2,8 @@ namespace GameState
 {
     public enum GameStateType
     {
+        /// <see cref="LoadingState"/>
+        Loading,
         /// <see cref="WaitingForPlayersState"/>
         WaitingForPlayers,
         /// <see cref="GameStartState"/>

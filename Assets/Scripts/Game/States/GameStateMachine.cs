@@ -16,6 +16,7 @@ namespace GameState
         // Network-relevant states that should be communicated across clients
         private static readonly HashSet<GameStateType> NetworkRelevantStates = new HashSet<GameStateType>
         {
+            GameStateType.Loading,
             GameStateType.WaitingForPlayers,
             GameStateType.Paused,
             GameStateType.GameOver

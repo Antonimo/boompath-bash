@@ -1,0 +1,47 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Unity Code Simplification Guidelines
+
+## Prefer Unity's Built-in APIs
+
+Always look for existing Unity APIs before implementing manual solutions:
+- Use Unity's component search methods instead of manual iteration
+- Leverage Transform hierarchy methods over custom loops
+- Trust Unity's automatic lifecycle management (destruction, cleanup, etc.)
+
+## Think Semantically, Not Generically
+
+Ask "What am I trying to achieve?" rather than "How do I iterate through things?"
+- Search directly for the component type you need
+- Use the most specific API available for your use case
+- Avoid generic approaches that require filtering
+
+## Question Manual Implementations
+
+Before writing loops or complex logic, ask:
+1. Does Unity have a built-in method for this?
+2. Am I overcomplicating this?
+3. Can I express this intent more directly?
+4. Am I fighting against Unity's design patterns?
+
+## Unity Hierarchy Principles
+
+- Trust parent-child relationships and automatic behaviors
+- Use hierarchy-aware methods when working with GameObjects
+- Let Unity handle cascading operations when possible
+- Prefer component-based searches over transform navigation
+
+## Simplification Mindset
+
+When reviewing Unity code:
+- Look for opportunities to use Unity APIs
+- Eliminate unnecessary intermediate steps
+- Choose the most direct path to your goal
+- Embrace Unity's conventions rather than fighting them
+
+Always aim for the cleanest, most Unity-idiomatic solution from the start.
+
+

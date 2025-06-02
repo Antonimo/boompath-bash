@@ -1,0 +1,23 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# No Compilation/Building Attempts
+
+**Important: Do not attempt to compile, build, or run terminal commands to check for compilation errors/warnings.**
+
+## Guidelines
+- The user prefers to handle compilation and error checking themselves
+- Do not run Unity builds, compiler commands, or similar tools to verify code changes
+- Do not suggest running compilation commands unless explicitly asked
+- Trust that the user will test and compile their own code
+- Focus on code analysis through reading and understanding rather than compilation
+
+## What to do instead
+- Analyze code statically by reading files
+- Use grep/search tools to find issues
+- Provide code fixes based on understanding of language syntax and Unity APIs
+- Explain potential issues but let the user verify them through compilation
+
+

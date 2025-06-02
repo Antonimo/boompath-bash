@@ -1,0 +1,48 @@
+---
+description: Git diff analysis for examining uncommitted file changes and comparing current state with previous versions
+globs: 
+alwaysApply: false
+---
+# Git Diff Analysis Rule
+
+## When to Use This Rule
+This rule should be applied when the user requests analysis of:
+- Changes made to files (uncommitted/unstaged)
+- Comparison between current state and previous version
+- Understanding what has been modified in their working directory
+- Debugging issues that may be related to recent changes
+
+## Key Indicators
+- User mentions "old version", "before changes", "what changed", "diff"
+- User wants to see or understand modifications to specific files
+- User is debugging and suspects recent changes are the cause
+- User explicitly asks about uncommitted or unstaged changes
+
+## Actions to Take
+
+### Use Git Diff Commands
+When the user needs to see changes, use the terminal command tool to run:
+```bash
+git --no-pager diff [filename]
+```
+
+### Analysis Approach
+1. First run the git diff command to see what has changed
+2. Analyze both the old version (marked with `-`) and new version (marked with `+`)
+3. Identify the specific modifications, additions, and deletions
+4. Provide context about how these changes might affect functionality
+5. If needed, read the current file content to understand the full context
+
+### Output Format
+- Clearly distinguish between old and new versions
+- Highlight significant changes that could impact functionality
+- Explain the implications of the changes
+- Suggest potential issues or improvements if relevant
+
+## Important Notes
+- Always use `--no-pager` flag to prevent git from opening a pager
+- The diff output shows `-` for removed lines and `+` for added lines
+- Context lines (unchanged) are shown without prefixes
+- Pay attention to line numbers and surrounding context
+- If the diff is large, focus on the most significant changes first
+

@@ -37,6 +37,7 @@ public class LobbyManager : MonoBehaviour
     public string LobbyCode => _currentLobby?.LobbyCode;
     public string LocalPlayerId { get; private set; }
     // TODO: how is this managed?
+    // TODO: use Lobby.HostId instead?
     public bool IsHost { get; private set; }
     public bool IsInLobby => _currentLobby != null;
 
@@ -878,6 +879,8 @@ public class LobbyManager : MonoBehaviour
     #region Countdown Management
     private void HandleCountdownNotification(ChangedOrRemovedLobbyValue<DataObject> countdownChange)
     {
+        Debug.Log($"LobbyManager: HandleCountdownNotification: {countdownChange.Removed} {countdownChange.Value?.Value}");
+
         if (countdownChange.Removed || countdownChange.Value == null)
         {
             return;
@@ -886,10 +889,10 @@ public class LobbyManager : MonoBehaviour
         string countdownStarted = countdownChange.Value.Value;
         Debug.Log($"LobbyManager: Received countdown status update: {countdownStarted}");
 
-        // If we're not the host and countdown is starting, start local countdown
-        if (!IsHost && countdownStarted == "true" && !countdownActive)
+        // All clients (including host) react to countdown notifications the same way
+        if (countdownStarted == "true" && !countdownActive)
         {
-            Debug.Log("LobbyManager: Client starting local countdown based on lobby notification");
+            Debug.Log("LobbyManager: Starting local countdown based on lobby notification");
             countdownActive = true;
             countdownTimeRemaining = gameStartCountdownDuration;
             OnCountdownTick?.Invoke(countdownTimeRemaining);
@@ -897,7 +900,7 @@ public class LobbyManager : MonoBehaviour
         // If countdown is cancelled
         else if (countdownStarted == "false" && countdownActive)
         {
-            Debug.Log("LobbyManager: Client cancelling local countdown based on lobby notification");
+            Debug.Log("LobbyManager: Cancelling local countdown based on lobby notification");
             countdownActive = false;
             countdownTimeRemaining = 0;
         }
@@ -907,12 +910,10 @@ public class LobbyManager : MonoBehaviour
     {
         if (!IsHost) return;
 
-        Debug.Log("LobbyManager: All players ready! Starting game countdown.");
-        countdownActive = true;
-        countdownTimeRemaining = gameStartCountdownDuration;
-        OnCountdownTick?.Invoke(countdownTimeRemaining);
+        Debug.Log("LobbyManager: All players ready! Host updating lobby data to start countdown.");
 
-        // Update lobby data to notify all clients about countdown start
+        // Host only updates lobby data - does NOT start local countdown
+        // All clients (including host) will react to the lobby data change
         try
         {
             var countdownData = new Dictionary<string, DataObject>

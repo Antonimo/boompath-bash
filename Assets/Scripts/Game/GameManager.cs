@@ -36,10 +36,11 @@ public class GameManager : MonoBehaviour
     private GameStateMachine stateMachine;
     public GameStateMachine StateMachine => stateMachine;
 
-    [SerializeField] private GameStateType initialGameState = GameStateType.WaitingForPlayers;
+    [SerializeField] private GameStateType initialGameState = GameStateType.Loading;
 
-    // TODO: Expose current state in inspector
-    public GameStateType CurrentState => stateMachine?.CurrentStateType ?? GameStateType.GameStart;
+    // TODO: Expose current state in inspector - This does not work..
+    // Current state accessor
+    public GameStateType CurrentState => stateMachine?.CurrentStateType ?? GameStateType.Loading;
 
     // Player management
     [SerializeField] private GameObject playersParent;
@@ -85,12 +86,7 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // Get players from playersParent if provided
-        if (playersParent != null && players.Count == 0)
-        {
-            players.AddRange(playersParent.GetComponentsInChildren<Player>());
-        }
-
+        InitializePlayers();
         // if (players.Count == 0)
         // {
         //     Debug.LogError("No players found in the scene. Please assign players or a players parent.");
@@ -116,6 +112,10 @@ public class GameManager : MonoBehaviour
     {
         stateMachine = new GameStateMachine();
 
+        // TODO: review this:
+        // TODO: this means all game states persist across session, is that good?
+        // TODO: maybe its better to set a fresh instance of state when switching?
+        stateMachine.AddState(GameStateType.Loading, new LoadingState(this));
         stateMachine.AddState(GameStateType.WaitingForPlayers, new WaitingForPlayersState(this));
         stateMachine.AddState(GameStateType.GameStart, new GameStartState(this));
         stateMachine.AddState(GameStateType.PlayerTurn, new PlayerTurnState(this));
@@ -133,6 +133,29 @@ public class GameManager : MonoBehaviour
     }
 
     // Public methods for state management
+
+    public void LoadGame()
+    {
+        stateMachine.ChangeState(GameStateType.Loading);
+    }
+
+    public void ClearPlayers()
+    {
+        players.Clear();
+    }
+
+    public void InitializePlayers()
+    {
+        if (playersParent != null)
+        {
+            players.AddRange(playersParent.GetComponentsInChildren<Player>());
+            Debug.Log($"[GameManager] Initialized players list. Found {players.Count} players.");
+        }
+        else
+        {
+            Debug.LogError("[GameManager] playersParent is not assigned. Cannot initialize players list.");
+        }
+    }
 
     public void ResetToFirstPlayer()
     {
@@ -272,9 +295,10 @@ public class GameManager : MonoBehaviour
         {
             players.Add(localPlayer);
         }
+
         currentPlayerIndex = players.IndexOf(localPlayer);
 
-        Debug.Log($"[GameManager] Set up local player: {localPlayer.playerName} at index {currentPlayerIndex}");
+        Debug.Log($"[GameManager] Set up local player: {localPlayer.playerName} at index {currentPlayerIndex} (total players: {players.Count})");
     }
 
     public void StartGame()

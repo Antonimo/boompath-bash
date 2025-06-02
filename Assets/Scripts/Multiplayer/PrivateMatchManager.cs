@@ -6,10 +6,38 @@ using Unity.Services.Relay.Models;
 using System.Collections.Generic;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
+using System.Collections;
 // TODO: refactor to host stuff separate and client stuff separate?
 
 // TODO: refactor Relay to its own service?
 //
+/// <summary>
+/// PrivateMatchManager is a HIGH-LEVEL component responsible for match orchestration and setup.
+/// 
+/// Key Responsibilities:
+/// - Match lifecycle: Creating, joining, and leaving private matches
+/// - Lobby management: Coordinating player readiness, countdown, and match initiation
+/// - Network setup: Relay allocation, host/client network startup coordination
+/// - Game mode and team configuration management
+/// - Transition orchestration: Managing the complete flow from lobby to active game
+/// 
+/// Architecture Position:
+/// - This is the TOP-LAYER component that orchestrates the entire match experience
+/// - Controls and coordinates lower-level managers (NetworkGameManager, HostStartupManager)
+/// - Handles high-level networking setup (Relay, Lobby) and coordination
+/// - Manages the transition from menu/lobby phase to active gameplay phase
+/// - Responsible for cleanup and error handling across the entire match lifecycle
+/// 
+/// Separation of Concerns:
+/// - PrivateMatchManager handles "how matches are set up and coordinated" (lobbies, networking, transitions)
+/// - NetworkGameManager handles "how the game is networked" (network sync, distributed game flow)
+/// - GameManager handles "what happens in the game" (local game mechanics, player interactions)
+/// 
+/// Network Flow Coordination:
+/// - Orchestrates the complete flow: Lobby → Network Setup → Game Transition → Active Gameplay
+/// - Ensures proper sequencing of network operations (Relay, player spawning, game initialization)
+/// - Coordinates between multiple network-aware systems during transitions
+/// </summary>
 public class PrivateMatchManager : MonoBehaviour
 {
     [SerializeField] private HostStartupManager hostStartupManager;
@@ -24,6 +52,9 @@ public class PrivateMatchManager : MonoBehaviour
 
     [SerializeField] private GameMode selectedGameMode;
     [SerializeField] private TeamSize selectedTeamSize;
+
+    // Track whether we're in game state (countdown + actual game) vs lobby state
+    private bool isInGame = false;
 
     private void ValidateDependencies()
     {
@@ -129,7 +160,7 @@ public class PrivateMatchManager : MonoBehaviour
             }
 
             // Start the host with Relay
-            if (!await StartHostWithRelayAsync(_allocation))
+            if (!StartHostWithRelay(_allocation))
             {
                 Debug.LogError("Failed to start host with Relay. Cleaning up.");
                 // TODO: CleanUpLobbyAndRelayOnErrorAsync? Cleanup Relay?
@@ -170,7 +201,7 @@ public class PrivateMatchManager : MonoBehaviour
             }
 
             // Start the client with Relay
-            if (!await StartClientWithRelayAsync(_joinAllocation))
+            if (!StartClientWithRelay(_joinAllocation))
             {
                 Debug.LogError("Failed to start client with Relay. Leaving lobby.");
                 await LobbyManager.Instance.LeaveLobbyAsync();
@@ -225,7 +256,7 @@ public class PrivateMatchManager : MonoBehaviour
         }
     }
 
-    private async Task<string> GetRelayJoinCodeFromLobbyAsync()
+    private string GetRelayJoinCodeFromLobby()
     {
         // Get Relay join code from the centralized service instead of making API calls
         string relayJoinCode = LobbyManager.Instance.GetLobbyData("RelayJoinCode");
@@ -244,7 +275,7 @@ public class PrivateMatchManager : MonoBehaviour
     {
         try
         {
-            string relayJoinCode = await GetRelayJoinCodeFromLobbyAsync();
+            string relayJoinCode = GetRelayJoinCodeFromLobby();
             if (string.IsNullOrEmpty(relayJoinCode))
             {
                 Debug.LogError("Failed to get Relay join code from lobby data.");
@@ -271,7 +302,7 @@ public class PrivateMatchManager : MonoBehaviour
         }
     }
 
-    private async Task<bool> StartHostWithRelayAsync(Allocation allocation)
+    private bool StartHostWithRelay(Allocation allocation)
     {
         if (allocation == null)
         {
@@ -303,7 +334,7 @@ public class PrivateMatchManager : MonoBehaviour
         }
     }
 
-    private async Task<bool> StartClientWithRelayAsync(JoinAllocation joinAllocation)
+    private bool StartClientWithRelay(JoinAllocation joinAllocation)
     {
         if (joinAllocation == null)
         {
@@ -353,9 +384,16 @@ public class PrivateMatchManager : MonoBehaviour
     // to the state when this is relevant...
     private void HandleLobbyStateUpdate(List<LobbyPlayerData> playersData, string localPlayerId, bool isLocalPlayerHost)
     {
+        // Only process lobby logic when not in game state (countdown + actual game)
+        if (isInGame)
+        {
+            return;
+        }
+
         // Game countdown logic: Check if local player is host and all players are ready
         if (isLocalPlayerHost && AreAllPlayersReady(playersData))
         {
+            isInGame = true;
             _ = LobbyManager.Instance.StartGameCountdown();
         }
     }
@@ -378,8 +416,12 @@ public class PrivateMatchManager : MonoBehaviour
 
     private void HandlePlayerReadyStateChanged()
     {
+        // TODO: when other client clicks ready, sometimes this fires AFTER "host update lobby data to start countdown"
+        Debug.Log("PrivateMatchManager: Player ready state changed.");
+
         // Cancel countdown if any player changes ready state to false
-        if (LobbyManager.Instance.IsHost)
+        // Only relevant when we're in lobby state (not already in game)
+        if (LobbyManager.Instance.IsHost && !isInGame)
         {
             // We need to check the current lobby state to see if all players are still ready
             // The countdown should only continue if all players remain ready
@@ -391,7 +433,7 @@ public class PrivateMatchManager : MonoBehaviour
 
     private void HandleCountdownComplete()
     {
-        StartGame();
+        SetupAndLaunchGame();
     }
 
     private bool AreAllPlayersReady(List<LobbyPlayerData> players)
@@ -414,17 +456,17 @@ public class PrivateMatchManager : MonoBehaviour
         return true;
     }
 
-    private void StartGame()
+    private void SetupAndLaunchGame()
     {
-        // Only host can actually start the game
+        // Only host can actually setup and launch the game
         if (!LobbyManager.Instance.IsHost)
         {
-            Debug.Log("Countdown complete on client. Waiting for host to start game...");
+            Debug.Log("PrivateMatchManager: Countdown complete on client. Waiting for host to setup and launch game...");
             return;
         }
 
-        Debug.Log("Countdown complete! Host starting game...");
-        networkGameManager.StartGame();
+        Debug.Log("PrivateMatchManager: Countdown complete! Host setting up and launching game...");
+        networkGameManager.SetupAndLaunchGame();
     }
 
     public async Task LeaveLobbyAndCleanupAsync()
@@ -436,6 +478,16 @@ public class PrivateMatchManager : MonoBehaviour
 
         // Clean up local Relay and networking state
         CleanupRelayAndNetworking();
+    }
+
+    /// <summary>
+    /// Returns to lobby state, allowing countdown logic to work again.
+    /// Call this when game ends, is cancelled, or when showing rematch/game over screen.
+    /// </summary>
+    public void ReturnToLobbyState()
+    {
+        Debug.Log("PrivateMatchManager: Returning to lobby state.");
+        isInGame = false;
     }
 
     private void CleanupRelayAndNetworking()
