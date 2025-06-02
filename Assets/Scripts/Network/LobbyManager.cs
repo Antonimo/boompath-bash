@@ -394,13 +394,62 @@ public class LobbyManager : MonoBehaviour
         try
         {
             var options = new UpdateLobbyOptions { Data = data };
-            await LobbyService.Instance.UpdateLobbyAsync(_currentLobby.Id, options);
+            _currentLobby = await LobbyService.Instance.UpdateLobbyAsync(_currentLobby.Id, options);
             Debug.Log("LobbyManager: Lobby data updated successfully");
+
+            // Since the host doesn't receive their own DataChanged events, we need to manually
+            // process the lobby data changes that were just applied
+            ProcessLobbyDataChangesForHost(data);
+
+            // Broadcast lobby state to update UI and notify subscribers
+            BroadcastLobbyState();
         }
         catch (LobbyServiceException e)
         {
             Debug.LogError($"LobbyManager: Failed to update lobby data: {e.Message}");
             OnLobbyError?.Invoke($"Failed to update lobby data: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Processes lobby data changes for the host since they don't receive their own DataChanged events.
+    /// This ensures the host triggers the same logic that clients receive via events.
+    /// </summary>
+    private void ProcessLobbyDataChangesForHost(Dictionary<string, DataObject> data)
+    {
+        // Handle countdown notifications manually for the host
+        if (data.ContainsKey(LobbyDataKeyCountdownStarted))
+        {
+            ProcessCountdownDataChange(data[LobbyDataKeyCountdownStarted].Value);
+        }
+    }
+
+    /// <summary>
+    /// Common method to process countdown data changes.
+    /// Used by both event handlers and manual host processing.
+    /// </summary>
+    private void ProcessCountdownDataChange(string countdownValue)
+    {
+        Debug.Log($"LobbyManager: Processing countdown status update: {countdownValue}");
+
+        // All clients (including host) react to countdown notifications the same way
+        if (countdownValue == "true" && !countdownActive)
+        {
+            Debug.Log("LobbyManager: Starting local countdown based on notification");
+            countdownActive = true;
+            countdownTimeRemaining = gameStartCountdownDuration;
+            OnCountdownTick?.Invoke(countdownTimeRemaining);
+        }
+        // If countdown is cancelled
+        else if (countdownValue == "false" && countdownActive)
+        {
+            Debug.Log("LobbyManager: Cancelling local countdown based on notification");
+            countdownActive = false;
+            countdownTimeRemaining = 0;
+        }
+        else
+        {
+            Debug.LogWarning($"LobbyManager: Invalid countdown value received: {countdownValue} countdownActive: {countdownActive}");
         }
     }
 
@@ -886,29 +935,25 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        string countdownStarted = countdownChange.Value.Value;
-        Debug.Log($"LobbyManager: Received countdown status update: {countdownStarted}");
+        if (countdownActive && countdownChange.Value.Value == "true")
+        {
+            Debug.LogError("LobbyManager: Countdown already active");
+        }
 
-        // All clients (including host) react to countdown notifications the same way
-        if (countdownStarted == "true" && !countdownActive)
-        {
-            Debug.Log("LobbyManager: Starting local countdown based on lobby notification");
-            countdownActive = true;
-            countdownTimeRemaining = gameStartCountdownDuration;
-            OnCountdownTick?.Invoke(countdownTimeRemaining);
-        }
-        // If countdown is cancelled
-        else if (countdownStarted == "false" && countdownActive)
-        {
-            Debug.Log("LobbyManager: Cancelling local countdown based on lobby notification");
-            countdownActive = false;
-            countdownTimeRemaining = 0;
-        }
+        // Use the DRY helper method for the actual countdown processing
+        ProcessCountdownDataChange(countdownChange.Value.Value);
     }
 
     public async Task StartGameCountdown()
     {
         if (!IsHost) return;
+
+        // Prevent multiple countdown start attempts
+        if (countdownActive)
+        {
+            Debug.Log("LobbyManager: Countdown already active, skipping duplicate start request.");
+            return;
+        }
 
         Debug.Log("LobbyManager: All players ready! Host updating lobby data to start countdown.");
 

@@ -42,6 +42,8 @@ public class GameManager : MonoBehaviour
     // Current state accessor
     public GameStateType CurrentState => stateMachine?.CurrentStateType ?? GameStateType.Loading;
 
+    public bool IsHost = true;
+
     // Player management
     [SerializeField] private GameObject playersParent;
     [SerializeField] private List<Player> players = new List<Player>();
@@ -62,13 +64,13 @@ public class GameManager : MonoBehaviour
     public SimplePathDrawing PathDrawing => pathDrawing;
     public PlayerTurn PlayerTurn => playerTurn;
 
-    // Debugging
-    [SerializeField] private bool enableDebugLogs = true;
-    public bool EnableDebugLogs => enableDebugLogs;
-
     // Winner tracking
     private Player winnerPlayer = null;
     public Player WinnerPlayer => winnerPlayer;
+
+    // Debugging (should be always last)
+    [SerializeField] private bool enableDebugLogs = true;
+    public bool EnableDebugLogs => enableDebugLogs;
 
     private void ValidateDependencies()
     {
@@ -105,7 +107,10 @@ public class GameManager : MonoBehaviour
     {
         stateMachine?.HandleInput();
 
-        CheckGameOverConditions();
+        if (IsHost)
+        {
+            CheckGameOverConditions();
+        }
     }
 
     private void InitializeStateMachine()
@@ -304,6 +309,16 @@ public class GameManager : MonoBehaviour
     public void StartGame()
     {
         stateMachine.ChangeState(GameStateType.GameStart);
+    }
+
+    public void GameOver()
+    {
+        stateMachine.ChangeState(GameStateType.GameOver);
+    }
+
+    public void Pause()
+    {
+        stateMachine.ChangeState(GameStateType.Paused);
     }
 
     private static bool CanEndGameFromState(GameStateType state)

@@ -37,6 +37,11 @@ using System.Collections;
 /// - Orchestrates the complete flow: Lobby → Network Setup → Game Transition → Active Gameplay
 /// - Ensures proper sequencing of network operations (Relay, player spawning, game initialization)
 /// - Coordinates between multiple network-aware systems during transitions
+/// 
+/// Race Condition Solution (See PROJECT_DECISIONS.md):
+/// - HandleLobbyStateUpdate: Definitive countdown decision point based on actual state
+/// - HandlePlayerReadyStateChanged: Smart event handling that requests current state instead of aggressive cancellation
+/// - Maintains immediate UI feedback while preventing false countdown cancellations from async UGS events
 /// </summary>
 public class PrivateMatchManager : MonoBehaviour
 {
@@ -53,8 +58,8 @@ public class PrivateMatchManager : MonoBehaviour
     [SerializeField] private GameMode selectedGameMode;
     [SerializeField] private TeamSize selectedTeamSize;
 
-    // Track whether we're in game state (countdown + actual game) vs lobby state
-    private bool isInGame = false;
+    // Track whether we're in countdown or actual game state vs lobby state (Countdown happens in lobby)
+    private bool isCountdownOrGameActive = false;
 
     private void ValidateDependencies()
     {
@@ -384,16 +389,22 @@ public class PrivateMatchManager : MonoBehaviour
     // to the state when this is relevant...
     private void HandleLobbyStateUpdate(List<LobbyPlayerData> playersData, string localPlayerId, bool isLocalPlayerHost)
     {
-        // Only process lobby logic when not in game state (countdown + actual game)
-        if (isInGame)
+        // Only process lobby logic when not in countdown or actual game state
+        if (isCountdownOrGameActive)
         {
             return;
         }
 
+        // DEFINITIVE COUNTDOWN DECISION: 
+        // This method serves as the single source of truth for countdown decisions.
+        // It's called both from immediate broadcasts (for UX) and delayed UGS events (for consistency).
+        // Per PROJECT_DECISIONS.md, we make countdown decisions based on actual current state,
+        // not on assumptions about state changes.
+
         // Game countdown logic: Check if local player is host and all players are ready
         if (isLocalPlayerHost && AreAllPlayersReady(playersData))
         {
-            isInGame = true;
+            isCountdownOrGameActive = true;
             _ = LobbyManager.Instance.StartGameCountdown();
         }
     }
@@ -416,18 +427,25 @@ public class PrivateMatchManager : MonoBehaviour
 
     private void HandlePlayerReadyStateChanged()
     {
-        // TODO: when other client clicks ready, sometimes this fires AFTER "host update lobby data to start countdown"
         Debug.Log("PrivateMatchManager: Player ready state changed.");
 
-        // Cancel countdown if any player changes ready state to false
-        // Only relevant when we're in lobby state (not already in game)
-        if (LobbyManager.Instance.IsHost && !isInGame)
+        // Only relevant when we're in lobby state (not countdown or actual game) and we're the host
+        if (LobbyManager.Instance.IsHost && !isCountdownOrGameActive)
         {
-            // We need to check the current lobby state to see if all players are still ready
-            // The countdown should only continue if all players remain ready
-            // Since this event fired, we know something changed, so we'll cancel and let
-            // HandleLobbyStateUpdate restart it if appropriate
-            _ = LobbyManager.Instance.CancelGameCountdown();
+            // SMART COUNTDOWN LOGIC: 
+            // Instead of aggressively canceling on any ready state change,
+            // make the countdown decision based on the current actual state.
+            // This handles the race condition where UGS events arrive after immediate broadcasts.
+
+            // Request current lobby state to make informed decision
+            // This will trigger HandleLobbyStateUpdate which contains the countdown logic
+            LobbyManager.Instance.RequestLobbyStateBroadcast();
+
+            // Note: Per PROJECT_DECISIONS.md, we assume ready buttons are disabled after clicking,
+            // so ready state changes are primarily additive (players becoming ready).
+            // HandleLobbyStateUpdate will start countdown if all players are ready,
+            // or naturally not start it if someone isn't ready.
+            // No aggressive cancellation needed since unready actions are prevented by UI.
         }
     }
 
@@ -487,7 +505,7 @@ public class PrivateMatchManager : MonoBehaviour
     public void ReturnToLobbyState()
     {
         Debug.Log("PrivateMatchManager: Returning to lobby state.");
-        isInGame = false;
+        isCountdownOrGameActive = false;
     }
 
     private void CleanupRelayAndNetworking()

@@ -44,6 +44,9 @@ public class NetworkGameManager : NetworkBehaviour
     [SerializeField] private PlayerSpawnManager playerSpawnManager;
     [SerializeField] private int requiredPlayerCount = 2;
 
+    // Authoritative winner information from host
+    private ulong winnerClientId = 0; // 0 means no winner/draw
+
     private void ValidateDependencies()
     {
         if (gameManager == null)
@@ -158,12 +161,6 @@ public class NetworkGameManager : NetworkBehaviour
         gameManager.LoadGame();
 
         menuManager.ClearAll();
-
-        // TODO: move this to when the gameState changes to GameStart?
-        if (LobbyManager.Instance != null)
-        {
-            _ = LobbyManager.Instance.ClearLocalPlayerReadyState();
-        }
     }
 
     private Player GetLocalPlayer()
@@ -190,6 +187,8 @@ public class NetworkGameManager : NetworkBehaviour
         // TODO: make sure cleanup happens when relevant
         // Subscribe to network-relevant state changes
         gameManager.StateMachine.OnNetworkRelevantGameStateChanged += OnNetworkRelevantGameStateChanged;
+
+        gameManager.IsHost = IsHost;
     }
 
     private void OnNetworkRelevantGameStateChanged(GameStateType fromState, GameStateType toState)
@@ -216,12 +215,37 @@ public class NetworkGameManager : NetworkBehaviour
 
         if (IsServer)
         {
-            // Broadcast game over to all clients
-            GameOverClientRpc();
+            // Host determines the winner authoritatively
+            ulong winnerClientId = DetermineWinnerClientId();
+            Debug.Log($"[NetworkGameManager] Host determined winner client ID: {winnerClientId}");
+
+            // Broadcast game over with winner client ID to all clients
+            GameOverClientRpc(winnerClientId);
         }
 
         // Show game over UI (both server and client)
         ShowGameOverUI();
+    }
+
+    /// <summary>
+    /// Host-only method to authoritatively determine the winner by client ID
+    /// </summary>
+    /// <returns>Winner player's client ID or 0 if no winner/draw</returns>
+    private ulong DetermineWinnerClientId()
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("[NetworkGameManager] DetermineWinnerClientId called on non-server!");
+            return 0;
+        }
+
+        Player winnerPlayer = gameManager.WinnerPlayer;
+        if (winnerPlayer != null)
+        {
+            return winnerPlayer.OwnerClientId;
+        }
+
+        return 0; // No winner (draw)
     }
 
     private void HandleGamePaused()
@@ -270,7 +294,7 @@ public class NetworkGameManager : NetworkBehaviour
     }
 
     // TODO: streamline flow management into the Update method?
-    // with checks for isInGame for checking if can transition to GameStart?
+    // with checks for isCountdownOrGameActive for checking if can transition to GameStart?
     private bool AreAllPlayersSpawned()
     {
         if (playersParent == null) return false;
@@ -313,20 +337,27 @@ public class NetworkGameManager : NetworkBehaviour
         {
             Debug.LogWarning($"[NetworkGameManager] Cannot transition to GameStart - current state is {gameManager?.CurrentState}");
         }
+
+        if (LobbyManager.Instance != null)
+        {
+            _ = LobbyManager.Instance.ClearLocalPlayerReadyState();
+        }
     }
 
     [ClientRpc]
-    private void GameOverClientRpc()
+    private void GameOverClientRpc(ulong winnerClientId)
     {
         if (!IsClient) return;
 
-        Debug.Log("[NetworkGameManager] Received GameOver from server");
+        Debug.Log($"[NetworkGameManager] Received GameOver from server with winner client ID: {winnerClientId}");
+
+        // Store the authoritative winner information
+        this.winnerClientId = winnerClientId;
 
         // Force all clients to enter GameOver state if they haven't already
         if (gameManager != null && gameManager.CurrentState != GameStateType.GameOver)
         {
-            // TODO: call gameManager.GameOver() instead?
-            gameManager.StateMachine.ChangeState(GameStateType.GameOver);
+            gameManager.GameOver();
         }
     }
 
@@ -342,8 +373,7 @@ public class NetworkGameManager : NetworkBehaviour
         // Force all clients to enter Paused state if they haven't already
         if (gameManager != null && gameManager.CurrentState != GameStateType.Paused)
         {
-            // TODO: call gameManager.Pause() instead?
-            gameManager.StateMachine.ChangeState(GameStateType.Paused);
+            gameManager.Pause();
         }
     }
 
@@ -364,34 +394,45 @@ public class NetworkGameManager : NetworkBehaviour
 
 
     /// <summary>
-    /// Gets the winner player name from the GameManager
+    /// Gets the authoritative winner player name resolved from the host-determined client ID
     /// </summary>
     /// <returns>Winner player name or empty string if no winner/draw</returns>
     public string GetWinnerPlayerName()
     {
-        Player winnerPlayer = gameManager.WinnerPlayer;
+        if (winnerClientId == 0)
+        {
+            return ""; // No winner / draw
+        }
+
+        // Resolve the player name from the authoritative client ID
+        Player winnerPlayer = GetPlayerByClientId(winnerClientId);
         if (winnerPlayer != null)
         {
             return winnerPlayer.playerName;
         }
 
-        return ""; // No winner (draw)
+        Debug.LogWarning($"[NetworkGameManager] Could not resolve winner player name for client ID: {winnerClientId}");
+        return "Unknown Player";
     }
 
-    // Call this when a player disconnects or the game needs to be reset
-    // public void ResetGameState()
-    // {
-    //     if (!IsServer) return;
+    /// <summary>
+    /// Helper method to find a Player by their client ID
+    /// </summary>
+    /// <param name="clientId">The client ID to search for</param>
+    /// <returns>Player component or null if not found</returns>
+    private Player GetPlayerByClientId(ulong clientId)
+    {
+        if (playersParent == null) return null;
 
-    //     ResetGameStateClientRpc();
-    // }
+        Player[] players = playersParent.GetComponentsInChildren<Player>();
+        foreach (Player player in players)
+        {
+            if (player.OwnerClientId == clientId)
+            {
+                return player;
+            }
+        }
 
-    // [ClientRpc]
-    // private void ResetGameStateClientRpc()
-    // {
-    //     if (gameManager != null)
-    //     {
-    //         gameManager.ResetToFirstPlayer();
-    //     }
-    // }
+        return null;
+    }
 }
