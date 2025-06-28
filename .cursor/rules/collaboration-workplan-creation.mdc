@@ -1,0 +1,146 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Collaboration Workplan Creation Guidelines
+
+## Purpose
+
+This rule provides guidelines for creating structured, focused collaboration workplans that facilitate efficient iterative development between AI and user. These workplans minimize cognitive load during review by keeping edits scoped and thematically coherent.
+
+## Core Principles
+
+### Document Purpose
+- **Primary Audience**: This document is primarily for the AI to maintain focus and structure
+- **Secondary Benefit**: Enables faster, easier user review through limited scope per interaction
+- **Living Document**: Must be updated after every interaction as the final action
+
+### Collaboration Flow
+- **Sequential Steps**: One numbered step at a time, never skip or combine steps
+- **Atomic Edits**: Each step should contain thematically related changes only
+- **Review Cycle**: AI implements → User reviews → AI updates workplan → Next step
+- **Completion Tracking**: Use checkboxes and completion markers (☑, ☐, [v])
+
+## Workplan Structure Template
+
+```markdown
+# [Project/Feature] Implementation Plan
+
+## Overview
+[Brief description of goals and scope]
+
+## Collaboration Guidelines
+- One step at a time implementation and review
+- AI implements code changes for current step
+- User reviews before proceeding to next step
+- This workplan file updated LAST in each interaction
+- Focus on limited, thematic scope per step
+
+## Phase N: [Phase Name] (estimated time)
+
+### ☐ Step N.N: [Clear, Actionable Title]
+- **Tasks:**
+  - ☐ Specific actionable item
+  - ☐ Another specific task
+  - ☐ **In Unity Editor:** [Manual tasks for user]
+- **Notes:**
+  - [To be filled after completion with deviations, decisions, follow-ups]
+
+### ☐ Step N.N+1: [Next Step Title]
+[Similar structure]
+
+## Success Criteria
+- [Clear completion criteria]
+- [Quality benchmarks]
+
+## Risk Mitigation
+- [Backup/rollback plans]
+- [Testing strategies]
+```
+
+## Step Creation Guidelines
+
+### Scope Definition
+- **Single Theme**: Each step should address one logical area (e.g., "Network Variables", "UI Integration", "State Management")
+- **Limited Cognitive Load**: User should be able to review all changes in 5-10 minutes
+- **Clear Boundaries**: Avoid mixing unrelated concerns (e.g., don't combine UI changes with network logic)
+
+### Task Breakdown
+- Use specific, actionable language ("Add NetworkVariable<int>", not "Handle networking")
+- Include Unity Editor tasks explicitly marked as **In Unity Editor:**
+- Break complex changes into sub-tasks with checkboxes
+- Avoid implementation details that will be obvious in code
+
+### Notes Section
+- Fill AFTER step completion, not before
+- Document deviations from original plan
+- Record architectural decisions made during implementation
+- Note follow-up tasks or dependencies discovered
+- Avoid restating obvious code changes visible in diffs
+
+## Content Guidelines
+
+### What to Include
+- Clear step-by-step progression
+- Specific file names and components to modify
+- Dependencies between steps
+- Manual configuration steps for Unity Editor
+- Completion criteria for each step
+
+### What to Avoid
+- Code examples (unless absolutely necessary for clarity)
+- Detailed implementation instructions (trust the AI to implement properly)
+- Overly granular micro-tasks
+- Mixing multiple unrelated concerns in one step
+
+## Document Management
+
+### Update Requirements
+- **Always update last** in each interaction
+- Mark completed steps with ☑ or [v]
+- Fill in "Implementation Notes & Follow-up" for completed steps
+- Add new steps or modify existing ones based on discoveries during implementation
+
+### Tracking Progress
+- Use consistent checkbox notation (☐ for todo, ☑ for done)
+- Maintain clear visual progress indicators
+- Group related steps into logical phases
+- Include estimated time for phases to help with planning
+
+## Quality Criteria
+
+### For AI Implementation
+- Follow the plan precisely without skipping steps
+- Update workplan as final action every interaction
+- Keep notes concise but informative
+- Flag when deviating from plan with reasoning
+
+### For User Review
+- Changes should be thematically coherent
+- Review scope should be limited and focused
+- Clear completion criteria should be met
+- Next steps should be obvious from current progress
+
+## Example Step Progression
+
+```markdown
+### ☑ Step 1.1: Create Basic Network Structure
+- **Tasks:**
+  - ☑ Create NetworkBehaviour base class
+  - ☑ Add NetworkVariable for core state
+  - ☑ Implement basic state synchronization
+- **Notes:**
+  - Used NetworkVariable<GameState> instead of int for type safety
+  - Added validation in setter to prevent invalid state transitions
+  - Next step will need to handle client-side state representation
+
+### ☐ Step 1.2: Implement Client-Side State Handling
+- **Tasks:**
+  - ☐ Add OnValueChanged callback for state NetworkVariable
+  - ☐ Create client-side state representation logic
+  - ☐ Ensure UI updates respond to state changes
+```
+
+This structure ensures focused, reviewable progress while maintaining clear documentation of the development process.
+

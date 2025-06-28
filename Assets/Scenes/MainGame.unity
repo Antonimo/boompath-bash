@@ -3430,83 +3430,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 435648497}
   m_CullTransparentMesh: 1
---- !u!1 &445240458
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 445240459}
-  - component: {fileID: 445240460}
-  - component: {fileID: 445240461}
-  m_Layer: 0
-  m_Name: NetworkGameManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &445240459
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 445240458}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &445240460
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 445240458}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1688957609
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 0
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
---- !u!114 &445240461
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 445240458}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 89a3d4ffa9bc349f2822ea18029d2ed7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  gameManager: {fileID: 691212229}
-  menuManager: {fileID: 974042091}
-  gameOverPanel: {fileID: 348717193}
-  playersParent: {fileID: 872770584}
-  playerSpawnManager: {fileID: 1115548364}
-  requiredPlayerCount: 2
 --- !u!1 &473385988
 GameObject:
   m_ObjectHideFlags: 0
@@ -5524,6 +5447,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 691212228}
+  - component: {fileID: 691212230}
   - component: {fileID: 691212229}
   m_Layer: 0
   m_Name: GameManager
@@ -5559,6 +5483,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2935102195fbc4b6caa5445b5a0b6af4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   initialGameState: 0
   playersParent: {fileID: 872770584}
   players: []
@@ -5568,6 +5493,35 @@ MonoBehaviour:
   pathDrawing: {fileID: 512370809}
   playerTurn: {fileID: 1609904529}
   enableDebugLogs: 1
+  menuManager: {fileID: 974042091}
+  gameOverPanel: {fileID: 348717193}
+  playerSpawnManager: {fileID: 1115548364}
+  requiredPlayerCount: 2
+--- !u!114 &691212230
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 691212227}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 2140358419
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
 --- !u!1 &701435257
 GameObject:
   m_ObjectHideFlags: 0
@@ -9725,7 +9679,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hostStartupManager: {fileID: 1115548365}
-  networkGameManager: {fileID: 445240461}
+  gameManager: {fileID: 691212229}
   selectedGameMode: 0
   selectedTeamSize: 0
 --- !u!1 &1607856927
@@ -14308,7 +14262,6 @@ SceneRoots:
   - {fileID: 1993732729}
   - {fileID: 218388069}
   - {fileID: 1589928594}
-  - {fileID: 445240459}
   - {fileID: 1115548363}
   - {fileID: 691212228}
   - {fileID: 1142975677}

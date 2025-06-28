@@ -41,6 +41,11 @@ public class LobbyManager : MonoBehaviour
     public bool IsHost { get; private set; }
     public bool IsInLobby => _currentLobby != null;
 
+    /// <summary>
+    /// Returns true if game countdown is currently active (countdown start time is set).
+    /// </summary>
+    public bool IsGameCountdownActive => !string.IsNullOrEmpty(GetLobbyData(LobbyDataKeyCountdownStartTime));
+
     // UGS Lobby objects and state
     private Lobby _currentLobby;
     private LobbyEventCallbacks _lobbyEventCallbacks;
@@ -56,19 +61,20 @@ public class LobbyManager : MonoBehaviour
     private const string PlayerDataKeyIsReady = "IsPlayerReady";
 
     // Constants for UGS Lobby Data keys
-    private const string LobbyDataKeyCountdownStarted = "CountdownStarted";
+    private const string LobbyDataKeyCountdownStartTime = "CountdownStartTime";
 
     // Countdown management
     [Header("Game Start Settings")]
     [SerializeField] private float gameStartCountdownDuration = 3f; // Countdown in seconds before game starts
-    private bool countdownActive = false;
-    private float countdownTimeRemaining = 0f;
 
     // TODO: why static?
     // TODO: should I use singleton instead?
     // Countdown events for UI to display
     public static event Action<float> OnCountdownTick; // Countdown remaining seconds
     public static event Action OnCountdownComplete; // When countdown reaches zero
+
+    // Track completion to prevent multiple invocations
+    private string _completedCountdownTimestamp;
 
     #region Singleton Setup
     private void Awake()
@@ -418,9 +424,9 @@ public class LobbyManager : MonoBehaviour
     private void ProcessLobbyDataChangesForHost(Dictionary<string, DataObject> data)
     {
         // Handle countdown notifications manually for the host
-        if (data.ContainsKey(LobbyDataKeyCountdownStarted))
+        if (data.ContainsKey(LobbyDataKeyCountdownStartTime))
         {
-            ProcessCountdownDataChange(data[LobbyDataKeyCountdownStarted].Value);
+            ProcessCountdownDataChange(data[LobbyDataKeyCountdownStartTime].Value);
         }
     }
 
@@ -428,28 +434,43 @@ public class LobbyManager : MonoBehaviour
     /// Common method to process countdown data changes.
     /// Used by both event handlers and manual host processing.
     /// </summary>
-    private void ProcessCountdownDataChange(string countdownValue)
+    private void ProcessCountdownDataChange(string countdownStartTimeValue)
     {
-        Debug.Log($"LobbyManager: Processing countdown status update: {countdownValue}");
+        Debug.Log($"LobbyManager: Processing countdown start time update: {countdownStartTimeValue}");
 
-        // All clients (including host) react to countdown notifications the same way
-        if (countdownValue == "true" && !countdownActive)
+        // If countdown start time is null or empty, countdown is cancelled/not active
+        if (string.IsNullOrEmpty(countdownStartTimeValue))
         {
-            Debug.Log("LobbyManager: Starting local countdown based on notification");
-            countdownActive = true;
-            countdownTimeRemaining = gameStartCountdownDuration;
-            OnCountdownTick?.Invoke(countdownTimeRemaining);
+            Debug.Log("LobbyManager: Countdown cancelled or cleared");
+            return;
         }
-        // If countdown is cancelled
-        else if (countdownValue == "false" && countdownActive)
+
+        // Parse the countdown start time as Unix timestamp
+        if (long.TryParse(countdownStartTimeValue, out long countdownStartTimestamp))
         {
-            Debug.Log("LobbyManager: Cancelling local countdown based on notification");
-            countdownActive = false;
-            countdownTimeRemaining = 0;
+            Debug.Log($"LobbyManager: Starting countdown from Unix timestamp: {countdownStartTimestamp}");
+
+            // Calculate how much time has elapsed since countdown started
+            long currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long elapsedSeconds = currentTimestamp - countdownStartTimestamp;
+            float remainingTime = gameStartCountdownDuration - elapsedSeconds;
+
+            // If countdown should have already completed
+            if (remainingTime <= 0)
+            {
+                Debug.Log("LobbyManager: Countdown already completed based on timestamp");
+                OnCountdownComplete?.Invoke();
+            }
+            else
+            {
+                // Start countdown with remaining time
+                Debug.Log($"LobbyManager: Starting countdown with {remainingTime:F1} seconds remaining");
+                OnCountdownTick?.Invoke(remainingTime);
+            }
         }
         else
         {
-            Debug.LogWarning($"LobbyManager: Invalid countdown value received: {countdownValue} countdownActive: {countdownActive}");
+            Debug.LogError($"LobbyManager: Failed to parse countdown start time as Unix timestamp: {countdownStartTimeValue}");
         }
     }
 
@@ -683,28 +704,32 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        // TODO: update local lobby data?
-        foreach (var entry in lobbyDataChanges)
+        // Update local lobby data to stay in sync with server
+        // This ensures GetLobbyData() returns correct values for connected clients
+        if (_currentLobby.Data != null)
         {
-            if (entry.Value.Removed)
+            foreach (var entry in lobbyDataChanges)
             {
-                Debug.Log($"LobbyManager: Lobby data key '{entry.Key}' was removed.");
-            }
-            else
-            {
-                Debug.Log($"LobbyManager: Lobby data key '{entry.Key}' was changed/added. Event value: {entry.Value.Value?.Value}");
+                if (entry.Value.Removed)
+                {
+                    Debug.Log($"LobbyManager: Lobby data key '{entry.Key}' was removed.");
+                    _currentLobby.Data.Remove(entry.Key);
+                }
+                else
+                {
+                    Debug.Log($"LobbyManager: Lobby data key '{entry.Key}' was changed/added. Event value: {entry.Value.Value?.Value}");
+                    _currentLobby.Data[entry.Key] = entry.Value.Value;
+                }
             }
         }
 
         // Handle countdown notifications
-        if (lobbyDataChanges.ContainsKey(LobbyDataKeyCountdownStarted))
+        if (lobbyDataChanges.ContainsKey(LobbyDataKeyCountdownStartTime))
         {
-            HandleCountdownNotification(lobbyDataChanges[LobbyDataKeyCountdownStarted]);
+            HandleCountdownNotification(lobbyDataChanges[LobbyDataKeyCountdownStartTime]);
         }
 
-        // Note: We rely on the event data and subsequent operations to keep our state updated
-        // The lobby object's Data property is read-only, so we work with the event information
-        Debug.Log("LobbyManager: Lobby data changes processed via events");
+        Debug.Log("LobbyManager: Lobby data changes processed and local state updated");
     }
 
     private void OnPlayerDataChangedEvent(Dictionary<int, Dictionary<string, ChangedOrRemovedLobbyValue<PlayerDataObject>>> changesByPlayerIndex)
@@ -928,28 +953,27 @@ public class LobbyManager : MonoBehaviour
     #region Countdown Management
     private void HandleCountdownNotification(ChangedOrRemovedLobbyValue<DataObject> countdownChange)
     {
-        Debug.Log($"LobbyManager: HandleCountdownNotification: {countdownChange.Removed} {countdownChange.Value?.Value}");
+        Debug.Log($"LobbyManager: HandleCountdownNotification: Removed={countdownChange.Removed}, Value={countdownChange.Value?.Value}");
 
-        if (countdownChange.Removed || countdownChange.Value == null)
+        // If the countdown data was removed, countdown is cancelled
+        if (countdownChange.Removed)
         {
+            Debug.Log("LobbyManager: Countdown data removed - countdown cancelled");
+            ProcessCountdownDataChange(null);
             return;
         }
 
-        if (countdownActive && countdownChange.Value.Value == "true")
-        {
-            Debug.LogError("LobbyManager: Countdown already active");
-        }
-
-        // Use the DRY helper method for the actual countdown processing
-        ProcessCountdownDataChange(countdownChange.Value.Value);
+        // Process the countdown start time value
+        ProcessCountdownDataChange(countdownChange.Value?.Value);
     }
 
     public async Task StartGameCountdown()
     {
         if (!IsHost) return;
 
-        // Prevent multiple countdown start attempts
-        if (countdownActive)
+        // Check if countdown is already active by looking for existing countdown start time
+        string existingCountdownTime = GetLobbyData(LobbyDataKeyCountdownStartTime);
+        if (!string.IsNullOrEmpty(existingCountdownTime))
         {
             Debug.Log("LobbyManager: Countdown already active, skipping duplicate start request.");
             return;
@@ -964,69 +988,134 @@ public class LobbyManager : MonoBehaviour
             var countdownData = new Dictionary<string, DataObject>
             {
                 {
-                    LobbyDataKeyCountdownStarted,
+                    LobbyDataKeyCountdownStartTime,
                     new DataObject(
                         visibility: DataObject.VisibilityOptions.Member,
-                        value: "true"
+                        value: DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
                     )
                 }
             };
 
             await UpdateLobbyDataAsync(countdownData);
-            Debug.Log("LobbyManager: Lobby data updated: Countdown started notification sent");
+            Debug.Log("LobbyManager: Lobby data updated: Countdown started with timestamp");
         }
         catch (Exception e)
         {
-            Debug.LogError($"LobbyManager: Failed to update lobby with countdown started notification: {e.Message}");
+            Debug.LogError($"LobbyManager: Failed to update lobby with countdown start time: {e.Message}");
         }
     }
 
     public async Task CancelGameCountdown()
     {
-        if (!countdownActive) return;
+        // Only the host should update the lobby data
+        if (!IsHost) return;
+
+        // Check if countdown is actually active
+        string existingCountdownTime = GetLobbyData(LobbyDataKeyCountdownStartTime);
+        if (string.IsNullOrEmpty(existingCountdownTime))
+        {
+            Debug.Log("LobbyManager: No active countdown to cancel.");
+            return;
+        }
 
         Debug.Log("LobbyManager: Game countdown cancelled.");
-        countdownActive = false;
-        countdownTimeRemaining = 0;
 
-        // Only the host should update the lobby data
-        if (IsHost)
+        try
         {
-            try
+            // Remove the countdown start time data to indicate countdown is cancelled
+            var countdownData = new Dictionary<string, DataObject>
             {
-                var countdownData = new Dictionary<string, DataObject>
                 {
-                    {
-                        LobbyDataKeyCountdownStarted,
-                        new DataObject(
-                            visibility: DataObject.VisibilityOptions.Member,
-                            value: "false"
-                        )
-                    }
-                };
+                    LobbyDataKeyCountdownStartTime,
+                    new DataObject(
+                        visibility: DataObject.VisibilityOptions.Member,
+                        value: null
+                    )
+                }
+            };
 
-                await UpdateLobbyDataAsync(countdownData);
-                Debug.Log("LobbyManager: Lobby data updated: Countdown cancelled notification sent");
-            }
-            catch (Exception e)
+            await UpdateLobbyDataAsync(countdownData);
+            Debug.Log("LobbyManager: Lobby data updated: Countdown start time cleared");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"LobbyManager: Failed to clear countdown start time: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Clears the countdown start time when the game actually starts.
+    /// This prevents the countdown UI from showing when returning to lobby after game ends.
+    /// </summary>
+    // TODO: review this vs CancelGameCountdown
+    public async Task ClearCountdownOnGameStart()
+    {
+        // Only the host should update the lobby data
+        if (!IsHost) return;
+
+        Debug.Log("LobbyManager: Clearing countdown start time as game is starting.");
+
+        try
+        {
+            // Remove the countdown start time data
+            var countdownData = new Dictionary<string, DataObject>
             {
-                Debug.LogError($"LobbyManager: Failed to update lobby with countdown cancelled notification: {e.Message}");
-            }
+                {
+                    LobbyDataKeyCountdownStartTime,
+                    new DataObject(
+                        visibility: DataObject.VisibilityOptions.Member,
+                        value: null
+                    )
+                }
+            };
+
+            await UpdateLobbyDataAsync(countdownData);
+            Debug.Log("LobbyManager: Countdown start time cleared for game start");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"LobbyManager: Failed to clear countdown start time on game start: {e.Message}");
         }
     }
 
     private void Update()
     {
-        // Only run countdown timer if active
-        if (countdownActive && countdownTimeRemaining > 0)
-        {
-            countdownTimeRemaining -= Time.deltaTime;
-            OnCountdownTick?.Invoke(countdownTimeRemaining);
+        // Check if countdown is active by looking for countdown start time in lobby data
+        string countdownStartTimeValue = GetLobbyData(LobbyDataKeyCountdownStartTime);
 
-            if (countdownTimeRemaining <= 0)
+        if (string.IsNullOrEmpty(countdownStartTimeValue))
+        {
+            // No active countdown
+            return;
+        }
+
+        // Skip processing if we've already completed this countdown
+        if (_completedCountdownTimestamp == countdownStartTimeValue)
+        {
+            // Don't show ticks or trigger completion again for an already completed countdown
+            return;
+        }
+
+        // Parse the countdown start time and calculate remaining time
+        if (long.TryParse(countdownStartTimeValue, out long countdownStartTimestamp))
+        {
+            long currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long elapsedSeconds = currentTimestamp - countdownStartTimestamp;
+            float remainingTime = gameStartCountdownDuration - elapsedSeconds;
+
+            if (remainingTime > 0)
             {
-                countdownActive = false;
+                // Countdown still active - notify UI
+                OnCountdownTick?.Invoke(remainingTime);
+            }
+            else
+            {
+                // Countdown completed - trigger completion event exactly once
+                Debug.Log("LobbyManager: Countdown completed");
                 OnCountdownComplete?.Invoke();
+
+                // Mark this countdown as processed to prevent duplicate invocations and ticks
+                _completedCountdownTimestamp = countdownStartTimeValue;
             }
         }
     }

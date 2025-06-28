@@ -5,7 +5,7 @@ using System.Collections; // For IEnumerator
 // TODO: DRY with PrivateMatchLobbyController - maybe shared sub component?
 public class PrivateMatchGameOverController : MonoBehaviour
 {
-    private NetworkGameManager networkGameManager;
+    private GameManager gameManager;
 
     [Header("UI References")]
     [SerializeField] private TextMeshProUGUI statusText;
@@ -25,10 +25,10 @@ public class PrivateMatchGameOverController : MonoBehaviour
             return;
         }
 
-        networkGameManager = FindFirstObjectByType<NetworkGameManager>();
-        if (networkGameManager == null)
+        gameManager = FindFirstObjectByType<GameManager>();
+        if (gameManager == null)
         {
-            Debug.LogError("PrivateMatchGameOverController: NetworkGameManager not found in the scene!");
+            Debug.LogError("PrivateMatchGameOverController: GameManager not found in the scene!");
             enabled = false;
             return;
         }
@@ -70,9 +70,9 @@ public class PrivateMatchGameOverController : MonoBehaviour
         statusText.text = "Game Over";
         winnerText.text = "Determining winner...";
 
-        // Request the winner information from NetworkGameManager
-        // TODO: what is the better data flow? maybe NetworkGameManager should set the data onto this component? 
-        string winnerName = networkGameManager.GetWinnerPlayerName();
+        // Request the winner information from GameManager
+        // TODO: what is the better data flow? maybe GameManager should set the data onto this component? 
+        string winnerName = gameManager.GetWinnerPlayerName();
         DisplayWinner(winnerName);
 
         Debug.Log("PrivateMatchGameOverController: OnEnable - END");

@@ -46,7 +46,7 @@ using System.Collections;
 public class PrivateMatchManager : MonoBehaviour
 {
     [SerializeField] private HostStartupManager hostStartupManager;
-    [SerializeField] private NetworkGameManager networkGameManager;
+    [SerializeField] private GameManager gameManager;
 
     // TODO: broeadcast state updates such as lobby deleted / disconnected / etc ?
 
@@ -58,8 +58,8 @@ public class PrivateMatchManager : MonoBehaviour
     [SerializeField] private GameMode selectedGameMode;
     [SerializeField] private TeamSize selectedTeamSize;
 
-    // Track whether we're in countdown or actual game state vs lobby state (Countdown happens in lobby)
-    private bool isCountdownOrGameActive = false;
+    // Track all players ready state to detect transitions
+    [SerializeField] private bool allPlayersReady = false;
 
     private void ValidateDependencies()
     {
@@ -69,9 +69,9 @@ public class PrivateMatchManager : MonoBehaviour
             enabled = false;
         }
 
-        if (networkGameManager == null)
+        if (gameManager == null)
         {
-            Debug.LogError("PrivateMatchManager: NetworkGameManager not found in the scene!");
+            Debug.LogError("PrivateMatchManager: GameManager not found in the scene!");
             enabled = false;
         }
 
@@ -385,28 +385,20 @@ public class PrivateMatchManager : MonoBehaviour
         return unityTransport;
     }
 
-    // TODO: this should remain disabled after coundown completes, ignoring lobby updates, until we are back 
-    // to the state when this is relevant...
     private void HandleLobbyStateUpdate(List<LobbyPlayerData> playersData, string localPlayerId, bool isLocalPlayerHost)
     {
-        // Only process lobby logic when not in countdown or actual game state
-        if (isCountdownOrGameActive)
-        {
-            return;
-        }
+        // Update our tracked state to stay in sync with lobby
+        bool currentlyAllReady = AreAllPlayersReady(playersData);
 
-        // DEFINITIVE COUNTDOWN DECISION: 
-        // This method serves as the single source of truth for countdown decisions.
-        // It's called both from immediate broadcasts (for UX) and delayed UGS events (for consistency).
-        // Per PROJECT_DECISIONS.md, we make countdown decisions based on actual current state,
-        // not on assumptions about state changes.
-
-        // Game countdown logic: Check if local player is host and all players are ready
-        if (isLocalPlayerHost && AreAllPlayersReady(playersData))
+        // Detect transition from "not all ready" to "all ready" - this is when countdown should start
+        if (isLocalPlayerHost && currentlyAllReady && !allPlayersReady)
         {
-            isCountdownOrGameActive = true;
+            Debug.Log("PrivateMatchManager: All players ready state transition detected - starting countdown");
             _ = LobbyManager.Instance.StartGameCountdown();
         }
+
+        // Always update our state to match current lobby state
+        allPlayersReady = currentlyAllReady;
     }
 
     private void HandleLobbyDeleted()
@@ -429,8 +421,8 @@ public class PrivateMatchManager : MonoBehaviour
     {
         Debug.Log("PrivateMatchManager: Player ready state changed.");
 
-        // Only relevant when we're in lobby state (not countdown or actual game) and we're the host
-        if (LobbyManager.Instance.IsHost && !isCountdownOrGameActive)
+        // Only relevant when we're in lobby state (not countdown) and we're the host
+        if (LobbyManager.Instance.IsHost && !LobbyManager.Instance.IsGameCountdownActive)
         {
             // SMART COUNTDOWN LOGIC: 
             // Instead of aggressively canceling on any ready state change,
@@ -452,6 +444,13 @@ public class PrivateMatchManager : MonoBehaviour
     private void HandleCountdownComplete()
     {
         SetupAndLaunchGame();
+
+        // Clear countdown start time when game launches to prevent countdown UI 
+        // from showing when returning to lobby after game ends
+        if (LobbyManager.Instance.IsHost)
+        {
+            _ = LobbyManager.Instance.ClearCountdownOnGameStart();
+        }
     }
 
     private bool AreAllPlayersReady(List<LobbyPlayerData> players)
@@ -484,7 +483,8 @@ public class PrivateMatchManager : MonoBehaviour
         }
 
         Debug.Log("PrivateMatchManager: Countdown complete! Host setting up and launching game...");
-        networkGameManager.SetupAndLaunchGame();
+        // TODO: review references to network object components, they might not exist for some network reasons, so they should be null checked
+        gameManager.SetupAndLaunchGame();
     }
 
     public async Task LeaveLobbyAndCleanupAsync()
@@ -505,7 +505,9 @@ public class PrivateMatchManager : MonoBehaviour
     public void ReturnToLobbyState()
     {
         Debug.Log("PrivateMatchManager: Returning to lobby state.");
-        isCountdownOrGameActive = false;
+
+        // Note: allPlayersReady will be updated naturally when lobby updates come in
+        // with players' actual ready states. We don't manually set it here.
     }
 
     private void CleanupRelayAndNetworking()

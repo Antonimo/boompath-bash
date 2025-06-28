@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Step-by-Step Refactor Discipline
+
+When executing a planned refactor with defined steps:
+
+## 📋 Before Starting
+- **Read the workplan file completely** - understand the full context and guidelines
+- **Follow ALL specific guidelines** defined in the workplan document
+- **Consult collaboration rules** and behavioral constraints in the plan
+
+## 🚫 Critical Rules
+- **ONLY do what the current step explicitly asks for**
+- **DO NOT anticipate future steps** - step boundaries are sacred
+- **Read step tasks word-for-word before starting**
+- **Stop immediately after the step is complete**
+
+## ⚠️ Expected During Refactor
+- **Compilation errors are normal and expected during migration**
+- **Broken intermediate states are intentional**
+- **Files become empty as a RESULT of moving code, not as a GOAL**
+
+## ✅ Success Pattern
+- Progressive completion: each step moves specific code pieces
+- Clear progress tracking: mark completed tasks
+- Disciplined scope: resist the urge to "fix everything at once"
+
+
+
+
