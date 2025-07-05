@@ -31,7 +31,7 @@ public class Bot : MonoBehaviour
         }
 
         player.IsBot = true;
-        Debug.Log($"[Bot] Initialized for player {player.playerName}");
+        Debug.Log($"[Bot] Initialized for player {player.OwnerClientId}");
     }
 
     private void LateUpdate()
@@ -84,7 +84,7 @@ public class Bot : MonoBehaviour
         {
             List<Vector3> selectedPath = botsManager.GetRandomPath();
 
-            Debug.Log($"[Bot] Assigning path to unit {pendingUnit.gameObject.name} for player {player.playerName}");
+            Debug.Log($"[Bot] Assigning path to unit {pendingUnit.gameObject.name} for player {player.OwnerClientId}");
 
             pendingUnit.FollowPath(selectedPath);
         }
@@ -92,7 +92,7 @@ public class Bot : MonoBehaviour
         {
             // This case should technically not happen if player.HasPendingUnits() returned true,
             // but good to handle just in case.
-            Debug.LogWarning($"[Bot] No pending units found after delay for player {player.playerName}, though HasPendingUnits was true.");
+            Debug.LogWarning($"[Bot] No pending units found after delay for player {player.OwnerClientId}, though HasPendingUnits was true.");
         }
 
         // Reset the flag after the process is complete

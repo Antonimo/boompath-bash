@@ -48,7 +48,7 @@ public class BaseController : NetworkBehaviour
             }
             else
             {
-                DebugLog($"Base automatically assigned to player: {ownerPlayer.playerName}");
+                DebugLog($"Base automatically assigned to player: {ownerPlayer.OwnerClientId}");
             }
         }
 
@@ -78,7 +78,7 @@ public class BaseController : NetworkBehaviour
         if (!IsServer) return;
         if (ownerPlayer == null) return; // Need an owner to manage unit counts
 
-        DebugLogUpdate($"Update called, ownerPlayer: {ownerPlayer.playerName}, spawnTimer: {spawnTimer}, isSpawnTimerRunning: {isSpawnTimerRunning}, ownerPlayer.HasPendingUnits: {ownerPlayer.HasPendingUnits()}");
+        DebugLogUpdate($"Update called, ownerPlayer: {ownerPlayer.OwnerClientId}, spawnTimer: {spawnTimer}, isSpawnTimerRunning: {isSpawnTimerRunning}, ownerPlayer.HasPendingUnits: {ownerPlayer.HasPendingUnits()}");
 
         // Check if we should start the spawn timer (only if it's not already running)
         if (!isSpawnTimerRunning && !ownerPlayer.HasPendingUnits())
@@ -127,7 +127,7 @@ public class BaseController : NetworkBehaviour
         // Check against max units using the Player's count
         if (maxUnits > 0 && ownerPlayer.GetUnitCount() >= maxUnits)
         {
-            DebugLog($"Max units ({maxUnits}) reached for player {ownerPlayer.playerName}.");
+            DebugLog($"Max units ({maxUnits}) reached for player {ownerPlayer.OwnerClientId}.");
             return false;
         }
 
@@ -203,7 +203,7 @@ public class BaseController : NetworkBehaviour
 
             // Initialize owner *immediately* after getting component and before parenting/adding
             unit.InitializeOwnerPlayer(ownerPlayer);
-            DebugLog($"Initialized owner for unit {unitNetworkObject.NetworkObjectId} to {ownerPlayer.playerName}");
+            DebugLog($"Initialized owner for unit {unitNetworkObject.NetworkObjectId} to {ownerPlayer.OwnerClientId}");
 
             // Set the parent *after* spawning and initializing owner.
             newUnitObject.transform.SetParent(ownerPlayer.transform, worldPositionStays: true);
@@ -216,7 +216,7 @@ public class BaseController : NetworkBehaviour
 
             // Register unit with the player (server-side)
             ownerPlayer.AddUnit(unit);
-            DebugLog($"Registered unit {unitNetworkObject.NetworkObjectId} with Player {ownerPlayer.playerName}.");
+            DebugLog($"Registered unit {unitNetworkObject.NetworkObjectId} with Player {ownerPlayer.OwnerClientId}.");
 
 
             // Assign initial state
@@ -258,7 +258,7 @@ public class BaseController : NetworkBehaviour
 
     private void HandleDeath()
     {
-        DebugLog($"Base {gameObject.name} belonging to {ownerPlayer?.playerName ?? "Unknown"} has been destroyed!");
+        DebugLog($"Base {gameObject.name} belonging to {ownerPlayer?.OwnerClientId.ToString() ?? "Unknown"} has been destroyed!");
 
         // TODO: Add visual/audio effects for destruction
         // TODO: Notify GameManager about base destruction (e.g., check for win/loss conditions)

@@ -2,10 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Collections; // Required for Coroutines
 using Unity.Netcode; // Added for Netcode
+using Unity.Collections; // Added for FixedString64Bytes
 
 public class Player : NetworkBehaviour
 {
-    public string playerName;
+
 
     // Use NetworkVariables for synchronized state
     // Server sets these, clients automatically receive updates.
@@ -24,7 +25,7 @@ public class Player : NetworkBehaviour
 
     [SerializeField] private bool enableDebugLogs = false;
 
-    // Called by the server (PlayerAssignmentManager) after spawn to initialize state
+    // Called by the server (PlayerSpawnManager) after spawn to initialize state
     public void Setup(Color initialColor, int initialTeamId)
     {
         if (!IsServer) return; // Only server should execute this

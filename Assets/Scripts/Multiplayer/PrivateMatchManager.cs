@@ -51,6 +51,7 @@ public class PrivateMatchManager : MonoBehaviour
     // TODO: broeadcast state updates such as lobby deleted / disconnected / etc ?
 
     // Relay allocation data
+    // TODO: relay manager?
     private string _relayJoinCode;
     private Allocation _allocation; // For host's Relay allocation
     private JoinAllocation _joinAllocation; // For client's Relay allocation
@@ -59,6 +60,7 @@ public class PrivateMatchManager : MonoBehaviour
     [SerializeField] private TeamSize selectedTeamSize;
 
     // Track all players ready state to detect transitions
+    // TODO: in the adge case that a player re-joins? or something else that would trigger allPlayersReady while already in game?
     [SerializeField] private bool allPlayersReady = false;
 
     private void ValidateDependencies()

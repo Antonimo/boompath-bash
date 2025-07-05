@@ -57,14 +57,37 @@ public class GameManager : NetworkBehaviour
     );
 
     /// <summary>
+    /// Network-synchronized winning player client ID.
+    /// Server-controlled, automatically synced to all clients.
+    /// Value of NoWinner means no winner/draw.
+    /// </summary>
+    private NetworkVariable<ulong> networkWinnerClientId = new NetworkVariable<ulong>(
+        NoWinner,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    /// <summary>
     /// Current game state (read-only access).
     /// </summary>
     public GameState CurrentState => networkGameState.Value;
 
     /// <summary>
-    /// Event fired when the game state changes on any client.
+    /// Current winning player client ID (read-only access).
     /// </summary>
-    public event Action<GameState, GameState> OnGameStateChanged;
+    public ulong WinnerClientId => networkWinnerClientId.Value;
+
+    /// <summary>
+    /// Returns true if there is a winner (not a draw).
+    /// </summary>
+    public bool HasWinner => WinnerClientId != NoWinner;
+
+    /// <summary>
+    /// Constant representing "no winner" state.
+    /// </summary>
+    public const ulong NoWinner = ulong.MaxValue;
+
+
     #endregion
 
     // TODO: fix region names, remove the refactoring flow comments.
@@ -100,25 +123,20 @@ public class GameManager : NetworkBehaviour
     public SimplePathDrawing PathDrawing => pathDrawing;
     public PlayerTurn PlayerTurn => playerTurn;
 
-    // Winner tracking
-    // TODO: use network variable?
-    private Player winnerPlayer = null;
-    public Player WinnerPlayer => winnerPlayer;
-
-    // Debugging (should be always last)
-    [SerializeField] private bool enableDebugLogs = true;
-    public bool EnableDebugLogs => enableDebugLogs;
+    /// <summary>
+    /// Gets the winning player object based on the network-synced winner client ID.
+    /// </summary>
+    public Player WinnerPlayer => GetPlayerByClientId(WinnerClientId);
     #endregion
 
     #region Network Setup and State
     [SerializeField] private PlayerSpawnManager playerSpawnManager; // Server-controlled player spawning
     [SerializeField] private int requiredPlayerCount = 2;
-
-    // TODO: no need because now we have WinnerPlayer?
-    // Authoritative winner information from host
-    // TODO: refactor with WinnerPlayer
-    private ulong winnerClientId = 0; // 0 means no winner/draw
     #endregion
+
+    // Debugging (should be always last)
+    [SerializeField] private bool enableDebugLogs = true;
+    public bool EnableDebugLogs => enableDebugLogs;
 
     #region Unity Lifecycle
     private void Awake()
@@ -200,6 +218,7 @@ public class GameManager : NetworkBehaviour
 
         // Subscribe to network state changes on all clients
         networkGameState.OnValueChanged += OnNetworkGameStateChanged;
+        networkWinnerClientId.OnValueChanged += OnNetworkWinnerChanged;
 
         if (IsServer)
         {
@@ -223,6 +242,11 @@ public class GameManager : NetworkBehaviour
             networkGameState.OnValueChanged -= OnNetworkGameStateChanged;
         }
 
+        if (networkWinnerClientId != null)
+        {
+            networkWinnerClientId.OnValueChanged -= OnNetworkWinnerChanged;
+        }
+
         Debug.Log("[GameManager] OnNetworkDespawn called");
     }
     #endregion
@@ -232,7 +256,7 @@ public class GameManager : NetworkBehaviour
     /// Changes the game state (server only).
     /// </summary>
     /// <param name="newState">The new game state to transition to</param>
-    public void ChangeGameState(GameState newState)
+    private void ChangeGameState(GameState newState)
     {
         if (!IsServer)
         {
@@ -247,6 +271,24 @@ public class GameManager : NetworkBehaviour
     }
 
     /// <summary>
+    /// Sets the winning player (server only).
+    /// </summary>
+    /// <param name="winnerClientId">The client ID of the winning player, or NoWinner for no winner/draw</param>
+    private void SetWinner(ulong winnerClientId)
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("[GameManager] SetWinner called on non-server. Only server can set winner.");
+            return;
+        }
+
+        ulong previousWinner = networkWinnerClientId.Value;
+        networkWinnerClientId.Value = winnerClientId;
+
+        Debug.Log($"[GameManager] Server set winner: {previousWinner} -> {winnerClientId}");
+    }
+
+    /// <summary>
     /// Handles network game state changes on all clients.
     /// </summary>
     private void OnNetworkGameStateChanged(GameState previousState, GameState newState)
@@ -254,9 +296,14 @@ public class GameManager : NetworkBehaviour
         Debug.Log($"[GameManager] Game state changed: {previousState} -> {newState}");
 
         HandleGameStateTransition(previousState, newState);
+    }
 
-        // TODO: where used?
-        OnGameStateChanged?.Invoke(previousState, newState);
+    /// <summary>
+    /// Handles network winner changes on all clients.
+    /// </summary>
+    private void OnNetworkWinnerChanged(ulong previousWinner, ulong newWinner)
+    {
+        Debug.Log($"[GameManager] Winner changed: {previousWinner} -> {newWinner}");
     }
 
     /// <summary>
@@ -284,10 +331,6 @@ public class GameManager : NetworkBehaviour
 
             case GameState.GameOver:
                 if (EnableDebugLogs) Debug.Log("[GameManager] Entering GameOver state");
-
-                // Network-specific logic adapted from OnNetworkRelevantGameStateChanged
-                // TODO: refactor to server only stuff and all clients cleanup stuff
-                HandleGameOver();
 
                 // TODO: why?
                 ResetSelectedUnit();
@@ -509,16 +552,16 @@ public class GameManager : NetworkBehaviour
             // Determine the winner
             if (aliveBases == 1 && aliveBase != null)
             {
-                winnerPlayer = aliveBase.OwnerPlayer;
-                Debug.Log($"[GameManager] Game over - Winner: {winnerPlayer?.playerName ?? "Unknown"}");
+                SetWinner(aliveBase.OwnerPlayer.OwnerClientId);
+                Debug.Log($"[GameManager] Game over - Winner: {aliveBase.OwnerPlayer?.OwnerClientId.ToString() ?? "Unknown"}");
             }
             else
             {
-                winnerPlayer = null; // Draw/no winner
+                SetWinner(NoWinner); // Draw/no winner
                 Debug.Log("[GameManager] Game over - No winner (draw)");
             }
 
-            ChangeGameState(GameState.GameOver);
+            GameOver();
         }
     }
 
@@ -558,7 +601,7 @@ public class GameManager : NetworkBehaviour
             if (players[nextIndex] != null && !players[nextIndex].IsBot)
             {
                 currentPlayerIndex = nextIndex;
-                Debug.Log($"[GameManager] Starting turn for player: {players[currentPlayerIndex].playerName}");
+                Debug.Log($"[GameManager] Starting turn for player: {players[currentPlayerIndex].OwnerClientId}");
                 // TODO: This should trigger LOCAL player turn state (PlayerTurn), not global game state change
                 // Local player interaction states (PlayerTurn, PathDrawing, TurnComplete) should be handled
                 // per-client during the global "Playing" state. This will be addressed in Phase 4 with
@@ -596,13 +639,11 @@ public class GameManager : NetworkBehaviour
 
         currentPlayerIndex = players.IndexOf(localPlayer);
 
-        Debug.Log($"[GameManager] Set up local player: {localPlayer.playerName} at index {currentPlayerIndex} (total players: {players.Count})");
+        Debug.Log($"[GameManager] Set up local player: {localPlayer.OwnerClientId} at index {currentPlayerIndex} (total players: {players.Count})");
     }
     #endregion
 
     #region Game Flow Control Methods
-
-    // TODO: make sure these are used instead of direct ChangeGameState calls
 
     /// <summary>
     /// Starts the playing state.
@@ -705,7 +746,7 @@ public class GameManager : NetworkBehaviour
 
         if (cameraPosition == null)
         {
-            Debug.LogWarning($"No CameraPosition found for player {CurrentPlayer.playerName}'s base. Using default camera position.");
+            Debug.LogWarning($"No CameraPosition found for player {CurrentPlayer.OwnerClientId}'s base. Using default camera position.");
         }
 
         if (CameraManager != null)
@@ -780,7 +821,7 @@ public class GameManager : NetworkBehaviour
     /// </summary>
     private void StartPlayerTurnPhase()
     {
-        if (EnableDebugLogs) Debug.Log($"Starting {CurrentPlayer.playerName}'s turn");
+        if (EnableDebugLogs) Debug.Log($"Starting {CurrentPlayer.OwnerClientId}'s turn");
 
         // Reset turn variables
         ResetSelectedUnit();
@@ -945,46 +986,6 @@ public class GameManager : NetworkBehaviour
     #region Network Event Handling Methods
 
     /// <summary>
-    /// Handles GameOver state logic adapted from OldNetworkGameManager.
-    /// Server determines winner and broadcasts to clients.
-    /// </summary>
-    // TODO: refactor, now we have synced game state and winnerClientId, so we can just use that
-    private void HandleGameOver()
-    {
-        Debug.Log("[GameManager] Handling GameOver state");
-
-        if (IsServer)
-        {
-            // Host determines the winner authoritatively
-            ulong winnerClientId = DetermineWinnerClientId();
-            Debug.Log($"[GameManager] Host determined winner client ID: {winnerClientId}");
-
-            // Broadcast game over with winner client ID to all clients
-            GameOverClientRpc(winnerClientId);
-        }
-
-        // TODO: maybe this should happen in GameOverClientRpc when the winner is set?
-        // Note: ShowGameOverUI() is called separately in HandleGameStateTransition
-    }
-
-    /// <summary>
-    /// Host-only method to authoritatively determine the winner by client ID.
-    /// Adapted from OldNetworkGameManager.
-    /// </summary>
-    /// <returns>Winner player's client ID or 0 if no winner/draw</returns>
-    private ulong DetermineWinnerClientId()
-    {
-        if (!IsServer)
-        {
-            Debug.LogError("[GameManager] DetermineWinnerClientId called on non-server!");
-            return 0;
-        }
-
-        // TODO: maybe this should be a network variable?
-        return WinnerPlayer?.OwnerClientId ?? 0;
-    }
-
-    /// <summary>
     /// ServerRpc to handle player spawn requests from clients.
     /// Adapted from OldNetworkGameManager.
     /// </summary>
@@ -1003,7 +1004,7 @@ public class GameManager : NetworkBehaviour
         if (AreAllPlayersSpawned())
         {
             Debug.Log("[GameManager] All players spawned! Transitioning directly to Playing state.");
-            ChangeGameState(GameState.Playing);
+            StartPlaying();
         }
     }
 
@@ -1028,28 +1029,7 @@ public class GameManager : NetworkBehaviour
 
 
 
-    /// <summary>
-    /// ClientRpc to handle game over notification with winner information.
-    /// Adapted from OldNetworkGameManager.
-    /// </summary>
-    // TODO: refactor, now we have synced game state and winnerClientId, so we can just use that
-    [ClientRpc]
-    private void GameOverClientRpc(ulong winnerClientId)
-    {
-        if (!IsClient) return;
 
-        Debug.Log($"[GameManager] Received GameOver from server with winner client ID: {winnerClientId}");
-
-        // Store the authoritative winner information
-        this.winnerClientId = winnerClientId;
-
-        // TODO: is this needed if we already sync game state?
-        // Force all clients to enter GameOver state if they haven't already
-        if (CurrentState != GameState.GameOver)
-        {
-            GameOver();
-        }
-    }
 
     /// <summary>
     /// Gets the authoritative winner player name resolved from the host-determined client ID.
@@ -1058,19 +1038,19 @@ public class GameManager : NetworkBehaviour
     /// <returns>Winner player name or empty string if no winner/draw</returns>
     public string GetWinnerPlayerName()
     {
-        if (winnerClientId == 0)
+        if (!HasWinner)
         {
             return ""; // No winner / draw
         }
 
         // Resolve the player name from the authoritative client ID
-        Player winnerPlayer = GetPlayerByClientId(winnerClientId);
+        Player winnerPlayer = GetPlayerByClientId(WinnerClientId);
         if (winnerPlayer != null)
         {
-            return winnerPlayer.playerName;
+            return $"Player {winnerPlayer.OwnerClientId}"; // TODO: Get actual player name from lobby/identity service
         }
 
-        Debug.LogWarning($"[GameManager] Could not resolve winner player name for client ID: {winnerClientId}");
+        Debug.LogWarning($"[GameManager] Could not resolve winner player name for client ID: {WinnerClientId}");
         return "Unknown Player";
     }
 
